@@ -110,7 +110,7 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-text);
     }}
     .block-container {{
-        padding-top: 0.55rem;
+        padding-top: 0.70rem;
         padding-bottom: 1.25rem;
         padding-left: 1.25rem;
         padding-right: 1.25rem;
@@ -278,21 +278,30 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-primary-dark);
     }}
     {actionbar} {{
-        padding: 0.42rem 0.75rem 0.38rem;
-        margin-bottom: 0.35rem;
+        padding: 0.58rem 0.85rem 0.52rem;
+        margin-bottom: 0.42rem;
         background: rgba(255,255,255,0.84);
         border: 1px solid var(--pbm-border);
         border-radius: 15px;
         box-shadow: 0 6px 20px rgba(64,51,140,0.045);
+        overflow: visible !important;
     }}
     {actionbar} [data-testid="stHorizontalBlock"] {{
-        min-height: 58px !important;
+        min-height: 82px !important;
         align-items: center !important;
+        overflow: visible !important;
+    }}
+    {actionbar} [data-testid="stImage"] {{
+        overflow: visible !important;
     }}
     {actionbar} [data-testid="stImage"] img {{
-        max-height: 52px !important;
+        max-height: 72px !important;
+        height: auto !important;
         width: auto !important;
+        max-width: 100% !important;
         object-fit: contain !important;
+        object-position: left center !important;
+        display: block !important;
     }}
     {board} {{gap: 0.45rem !important;}}
     {board} [data-testid="stExpander"] {{
@@ -599,7 +608,7 @@ inject_brand_styles(data)
 
 def render_header():
     with ui_container("top_actionbar", "actionbar"):
-        c1, c2, c3 = st.columns([0.95, 4.75, 1.0], vertical_alignment="center")
+        c1, c2, c3 = st.columns([1.15, 4.55, 1.0], vertical_alignment="center")
         with c1:
             if LOGO_PATH.exists():
                 st.image(str(LOGO_PATH), use_container_width=True)
