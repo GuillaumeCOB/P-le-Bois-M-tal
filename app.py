@@ -490,7 +490,7 @@ def inject_brand_styles(data: dict):
     {summary} .pbm-side-budget {{
         margin: 0.10rem 0.46rem 0;
         color: var(--pbm-primary-dark);
-        font-size: 1.02rem;
+        font-size: 0.82rem;
         line-height: 1.05;
         font-weight: 800;
         font-variant-numeric: tabular-nums;
