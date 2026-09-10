@@ -633,28 +633,6 @@ def render_group_total_row(projects_in_group: list[dict]):
 
 with tab_board:
     with ui_container("pbm_board", "board"):
-        stats = st.columns(4)
-        total_projects = len(data["projects"])
-        total_budget_all = sum(float(p.get("budget", 0) or 0) for p in data["projects"])
-        total_hours_all = sum(float(p.get("estimated_time", 0) or 0) for p in data["projects"])
-        stats[0].markdown(
-            f'<div class="pbm-summary-card"><div class="pbm-summary-label">Projets</div><strong>{total_projects}</strong></div>',
-            unsafe_allow_html=True,
-        )
-        stats[1].markdown(
-            f'<div class="pbm-summary-card"><div class="pbm-summary-label">Budget cumulé</div><strong>{display_amount(total_budget_all)}</strong></div>',
-            unsafe_allow_html=True,
-        )
-        stats[2].markdown(
-            f'<div class="pbm-summary-card"><div class="pbm-summary-label">Heures cumulées</div><strong>{display_hours(total_hours_all)}</strong></div>',
-            unsafe_allow_html=True,
-        )
-        stats[3].markdown(
-            f'<div class="pbm-summary-card"><div class="pbm-summary-label">Groupes</div><strong>{len(data["statuses"])}</strong></div>',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("<div style='height:0.42rem'></div>", unsafe_allow_html=True)
         filters = st.columns([1.5, 1.0, 1.0, 1.0], gap="small")
         query = filters[0].text_input(
             "Rechercher un projet", placeholder="Rechercher nom, numéro, remarques...",
