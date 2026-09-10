@@ -830,8 +830,8 @@ def render_group_summary():
                 args=(None,),
             )
             st.markdown(
-                f'<div class="pbm-side-budget">{display_amount(all_budget)}</div>'
-                f'<div class="pbm-side-meta">{len(all_projects)} projet{"s" if len(all_projects) != 1 else ""} · {display_hours(all_hours)}</div>',
+                f'<div class="pbm-side-budget">{len(all_projects)} projet{"s" if len(all_projects) != 1 else ""} - {display_amount(all_budget)}</div>'
+                f'<div class="pbm-side-meta" style="visibility:hidden">&nbsp;</div>',
                 unsafe_allow_html=True,
             )
 
@@ -848,8 +848,8 @@ def render_group_summary():
                     args=(status,),
                 )
                 st.markdown(
-                    f'<div class="pbm-side-budget">{display_amount(group_budget)}</div>'
-                    f'<div class="pbm-side-meta">{len(group_projects)} projet{"s" if len(group_projects) != 1 else ""} · {display_hours(group_hours)}</div>',
+                    f'<div class="pbm-side-budget">{len(group_projects)} projet{"s" if len(group_projects) != 1 else ""} - {display_amount(group_budget)}</div>'
+                    f'<div class="pbm-side-meta" style="visibility:hidden">&nbsp;</div>',
                     unsafe_allow_html=True,
                 )
 
