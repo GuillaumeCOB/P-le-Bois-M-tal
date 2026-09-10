@@ -482,7 +482,7 @@ def inject_brand_styles(data: dict):
         border-color: rgba(59,56,245,0.25) !important;
     }}
     {summary} [data-testid="stButton"] button p {{
-        font-size: 0.80rem !important;
+        font-size: 0.92rem !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
