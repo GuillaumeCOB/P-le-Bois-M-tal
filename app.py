@@ -118,35 +118,40 @@ def inject_brand_styles(data: dict):
     h1, h2, h3 {{color: var(--pbm-primary-dark); letter-spacing: -0.02em;}}
     h1 {{font-size: 1.55rem !important; padding: 0 !important; margin: 0 !important;}}
     h3 {{font-size: 1rem !important;}}
-    [data-testid="stTabs"] [role="tablist"] {{
-        gap: 0.45rem !important;
-        padding: 0.3rem !important;
-        background: rgba(59, 56, 245, 0.045) !important;
-        border: 1px solid rgba(59, 56, 245, 0.10) !important;
-        border-radius: 14px !important;
-        width: fit-content !important;
+    [data-testid="stTabs"] [role="tablist"],
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {{
+        gap: 0.55rem !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        width: auto !important;
+        box-shadow: none !important;
     }}
-    [data-testid="stTabs"] button[role="tab"] {{
-        min-height: 2.35rem !important;
-        height: 2.35rem !important;
-        padding: 0 0.95rem !important;
+    [data-testid="stTabs"] button[role="tab"],
+    [data-testid="stTabs"] [data-baseweb="tab"] {{
+        min-height: 2.45rem !important;
+        height: 2.45rem !important;
+        padding: 0 1rem !important;
         margin: 0 !important;
-        background: rgba(255, 255, 255, 0.92) !important;
-        border: 1px solid rgba(59, 56, 245, 0.10) !important;
-        border-radius: 10px !important;
-        box-shadow: 0 1px 2px rgba(64, 51, 140, 0.04) !important;
+        background: #ffffff !important;
+        border: 1px solid rgba(59, 56, 245, 0.14) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 6px rgba(64, 51, 140, 0.05) !important;
         color: var(--pbm-text) !important;
     }}
-    [data-testid="stTabs"] button[role="tab"] p {{
+    [data-testid="stTabs"] button[role="tab"] p,
+    [data-testid="stTabs"] [data-baseweb="tab"] p {{
         margin: 0 !important;
-        font-size: 0.88rem !important;
+        font-size: 0.89rem !important;
         font-weight: 600 !important;
     }}
-    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
-        background: rgba(59, 56, 245, 0.16) !important;
+    [data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+    [data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {{
+        background: rgba(59, 56, 245, 0.12) !important;
         border-color: rgba(59, 56, 245, 0.28) !important;
         color: var(--pbm-primary-dark) !important;
-        box-shadow: inset 0 0 0 1px rgba(59, 56, 245, 0.04) !important;
+        box-shadow: inset 0 0 0 1px rgba(59, 56, 245, 0.04), 0 2px 8px rgba(64, 51, 140, 0.06) !important;
     }}
     [data-testid="stTabs"] [data-baseweb="tab-highlight"],
     [data-testid="stTabs"] [data-baseweb="tab-border"] {{
@@ -292,11 +297,11 @@ def inject_brand_styles(data: dict):
     {board} [data-testid="stExpanderDetails"] {{padding: 0 0.55rem 0.55rem;}}
     {group}, {project}, {row}, {header}, {children}, {subrow}, {total}, {formcard} {{gap: 0 !important;}}
     {header} {{
-        padding: 0.3rem 0.2rem 0.38rem;
+        padding: 0.34rem 0.28rem 0.42rem;
         background: rgba(59,56,245,0.05);
         border-radius: 10px;
         border: 1px solid rgba(59,56,245,0.08);
-        margin-bottom: 0.18rem;
+        margin-bottom: 0.55rem;
     }}
     {header} .pbm-cell {{
         font-size: 0.73rem;
