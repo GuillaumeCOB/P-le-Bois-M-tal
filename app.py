@@ -1,14 +1,18 @@
+
 """
 Outil interne de gestion de projets — Pôle BOIS/METAL
-Inspiré de Monday.com : projets, sous-tâches, groupes par statut,
-assignation de collaborateurs, budget, échéances, types de projet,
-vues Calendrier & Gantt.
+Version interface compacte + charte graphique Builders / verticalsea.
 
-Lancement local :  streamlit run app.py
+Lancement local : streamlit run app.py
 """
 
 import calendar as cal
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta
+from html import escape
+import inspect
+from pathlib import Path
+import re
 
 import pandas as pd
 import plotly.express as px
@@ -16,32 +20,57 @@ import streamlit as st
 
 import storage as db
 
-from contextlib import contextmanager
-from html import escape
-import inspect
-import re
+st.set_page_config(
+    page_title="Builders verticalsea - Gestion de projets",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
-st.set_page_config(page_title="Pôle BOIS/METAL - Gestion de projets", layout="wide", initial_sidebar_state="collapsed")
 PATH = None
-ROW_WIDTHS = [0.32, 3.15, 0.85, 1.65, 1.15, 1.1, 0.95, 0.85, 0.7]
-ROW_LABELS = ["", "Projet", "Type", "Collaborateurs", "Statut", "Échéance", "Budget", "Charge", "Tâches"]
+PRIMARY = "#3B38F5"
+PRIMARY_DARK = "#40338C"
+SURFACE = "#F5F4F7"
+SURFACE_ALT = "#FFFFFF"
+TEXT = "#1F2340"
+MUTED = "#70759A"
+BORDER = "#D8D9E5"
+LOGO_PATH = Path(__file__).parent / "assets" / "logo_builders_verticalsea.png"
 
+ROW_WIDTHS = [0.38, 0.78, 2.85, 0.95, 1.55, 1.15, 1.0, 0.95, 0.95, 0.72]
+ROW_LABELS = ["", "N°", "Projet", "Type", "Collaborateurs", "Statut", "Échéance", "Budget", "Heures", "Tâches"]
+TOTAL_WIDTHS = [0.38, 0.78, 2.85, 0.95, 1.55, 1.15, 1.0, 0.95, 0.95, 0.72]
 
-# Presentation only: the existing storage API and data format are unchanged.
 _HAS_CONTAINER_KEY = "key" in inspect.signature(st.container).parameters
 
 
+def safe_color(value: str, fallback: str = PRIMARY) -> str:
+    return value if isinstance(value, str) and re.fullmatch(r"#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?", value) else fallback
+
+
+def hex_to_rgba(value: str, alpha: float) -> str:
+    color = safe_color(value)
+    color = color.lstrip("#")
+    if len(color) == 3:
+        color = "".join(ch * 2 for ch in color)
+    r = int(color[0:2], 16)
+    g = int(color[2:4], 16)
+    b = int(color[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
 @contextmanager
-def ui_container(key: str, kind: str):
-    """Named CSS scopes; compatible with Streamlit 1.38 (without container.key)."""
+def ui_container(key: str, kinds):
+    if isinstance(kinds, str):
+        kinds = [kinds]
     options = {"border": False}
     if _HAS_CONTAINER_KEY:
         options["key"] = key
     with st.container(**options):
-        st.markdown(
-            f'<span class="pbm-marker pbm-{kind}-marker"></span>',
-            unsafe_allow_html=True,
-        )
+        for kind in kinds:
+            st.markdown(
+                f'<span class="pbm-marker pbm-{kind}-marker"></span>',
+                unsafe_allow_html=True,
+            )
         yield
 
 
@@ -53,126 +82,258 @@ def css_scope(kind: str) -> str:
     )
 
 
-def safe_color(value: str, fallback: str = "#64748b") -> str:
-    return value if isinstance(value, str) and re.fullmatch(r"#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?", value) else fallback
-
-
-def inject_compact_styles():
-    # Semantic marker scopes avoid applying table sizing to edit forms.
+def inject_brand_styles(data: dict):
     board = css_scope("board")
     group = css_scope("group")
     project = css_scope("project")
     row = css_scope("row")
     header = css_scope("header")
+    total = css_scope("total")
     children = css_scope("children")
     subrow = css_scope("subrow")
-    css = """
-    .block-container {
-        padding-top: 3.7rem;
-        padding-bottom: 1.2rem;
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
+    actionbar = css_scope("actionbar")
+    formcard = css_scope("formcard")
+
+    css = f"""
+    :root {{
+        --pbm-primary: {PRIMARY};
+        --pbm-primary-dark: {PRIMARY_DARK};
+        --pbm-surface: {SURFACE};
+        --pbm-surface-alt: {SURFACE_ALT};
+        --pbm-text: {TEXT};
+        --pbm-muted: {MUTED};
+        --pbm-border: {BORDER};
+    }}
+    .stApp {{
+        background: linear-gradient(180deg, #ffffff 0%, #fafafe 65%, #f6f6fb 100%);
+        color: var(--pbm-text);
+    }}
+    .block-container {{
+        padding-top: 1.1rem;
+        padding-bottom: 1.25rem;
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
         max-width: none;
-    }
-    h1 {font-size: 1.55rem !important; padding: 0 0 0.35rem !important;}
-    [data-testid="stTabs"] [data-baseweb="tab-list"] {gap: 1rem;}
-    [data-testid="stTabs"] [data-baseweb="tab"] {height: 2.2rem; padding: 0 0.25rem;}
-    :is(.element-container, [data-testid="stElementContainer"]):has(.pbm-marker) {
+    }}
+    h1, h2, h3 {{color: var(--pbm-primary-dark); letter-spacing: -0.02em;}}
+    h1 {{font-size: 1.55rem !important; padding: 0 !important; margin: 0 !important;}}
+    h3 {{font-size: 1rem !important;}}
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {{gap: 0.35rem;}}
+    [data-testid="stTabs"] [data-baseweb="tab"] {{
+        height: 2.35rem;
+        background: rgba(59, 56, 245, 0.06);
+        border-radius: 999px;
+        padding: 0 0.9rem;
+    }}
+    [data-testid="stTabs"] [aria-selected="true"] {{
+        background: rgba(59, 56, 245, 0.14) !important;
+        color: var(--pbm-primary-dark) !important;
+        font-weight: 700;
+    }}
+    :is(.element-container, [data-testid="stElementContainer"]):has(.pbm-marker) {{
         display: none !important;
-    }
-    .pbm-cell {
-        font-size: 0.875rem;
-        line-height: 1.35;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        padding: 2px 3px;
-    }
-    .pbm-cell.number {text-align: right; font-variant-numeric: tabular-nums;}
-    .pbm-cell.progress {text-align: center; opacity: 0.75; font-variant-numeric: tabular-nums;}
-    .pbm-cell.done {text-decoration: line-through; opacity: 0.55;}
-    .pbm-badge {
-        display: inline-block;
+    }}
+    [data-testid="stButton"] button,
+    [data-testid="stDownloadButton"] button {{
+        border-radius: 10px;
+    }}
+    .pbm-headline {{display:flex; flex-direction:column; gap:0.15rem;}}
+    .pbm-eyebrow {{color: var(--pbm-primary); font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em;}}
+    .pbm-subline {{color: var(--pbm-muted); font-size: 0.85rem;}}
+    .pbm-badge {{
+        display: inline-flex;
+        align-items: center;
         max-width: 100%;
-        vertical-align: middle;
-        padding: 2px 7px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        line-height: 1.4;
-        font-weight: 600;
+        padding: 0.22rem 0.52rem;
+        border-radius: 999px;
+        font-size: 0.76rem;
+        line-height: 1.25;
+        font-weight: 700;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-    }
-    .pbm-summary {font-size: 0.77rem; opacity: 0.72; padding: 6px 4px 0;}
-    """
-    css += f"""
-    {board} {{gap: 0.5rem !important;}}
-    {board} [data-testid="stExpander"] {{border-radius: 5px;}}
-    {board} [data-testid="stExpander"] summary {{padding: 0.35rem 0.5rem; min-height: 2rem;}}
-    {board} [data-testid="stExpanderDetails"] {{padding: 0 0.45rem 0.4rem;}}
-    {group}, {project}, {row}, {header}, {children}, {subrow} {{gap: 0 !important;}}
-    {project} {{border-bottom: 1px solid rgba(128, 128, 128, 0.2);}}
-    {row} {{padding: 3px 0; min-height: 38px;}}
-    {row}:hover {{background: rgba(128, 128, 128, 0.055);}}
-    {header} {{background: rgba(128, 128, 128, 0.065); padding: 5px 0; border-bottom: 1px solid rgba(128, 128, 128, 0.23);}}
-    {header} .pbm-cell {{font-size: 0.76rem; font-weight: 600; opacity: 0.8;}}
+        border: 1px solid rgba(0,0,0,0.04);
+    }}
+    .pbm-cell {{
+        font-size: 0.84rem;
+        line-height: 1.42;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--pbm-text);
+        padding: 0.14rem 0.18rem;
+    }}
+    .pbm-cell.number {{text-align:right; font-variant-numeric: tabular-nums; font-weight: 600;}}
+    .pbm-cell.progress {{text-align:center; opacity: 0.78; font-variant-numeric: tabular-nums;}}
+    .pbm-cell.done {{text-decoration: line-through; opacity: 0.6;}}
+    .pbm-project-number {{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width: 2.3rem;
+        padding: 0.18rem 0.45rem;
+        background: rgba(255,255,255,0.72);
+        border: 1px solid rgba(59,56,245,0.16);
+        border-radius: 999px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: var(--pbm-primary-dark);
+    }}
+    .pbm-summary-card {{
+        background: rgba(255,255,255,0.75);
+        border: 1px solid var(--pbm-border);
+        border-radius: 16px;
+        padding: 0.85rem 1rem;
+    }}
+    .pbm-summary-card strong {{color: var(--pbm-primary-dark);}}
+    .pbm-summary-label {{font-size:0.76rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--pbm-muted);}}
+    {actionbar} {{
+        padding: 0.9rem 1rem 0.7rem;
+        margin-bottom: 0.55rem;
+        background: rgba(255,255,255,0.84);
+        border: 1px solid var(--pbm-border);
+        border-radius: 18px;
+        box-shadow: 0 8px 28px rgba(64,51,140,0.05);
+    }}
+    {board} {{gap: 0.45rem !important;}}
+    {board} [data-testid="stExpander"] {{
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(64,51,140,0.08);
+        background: rgba(255,255,255,0.82);
+        box-shadow: 0 10px 30px rgba(64,51,140,0.04);
+    }}
+    {board} [data-testid="stExpander"] summary {{padding: 0.55rem 0.75rem; min-height: 2.3rem;}}
+    {board} [data-testid="stExpanderDetails"] {{padding: 0 0.55rem 0.55rem;}}
+    {group}, {project}, {row}, {header}, {children}, {subrow}, {total}, {formcard} {{gap: 0 !important;}}
+    {header} {{
+        padding: 0.3rem 0.2rem 0.38rem;
+        background: rgba(59,56,245,0.05);
+        border-radius: 10px;
+        border: 1px solid rgba(59,56,245,0.08);
+        margin-bottom: 0.18rem;
+    }}
+    {header} .pbm-cell {{
+        font-size: 0.73rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--pbm-muted);
+    }}
+    {project} {{margin-bottom: 0.28rem;}}
+    {row} {{
+        padding: 0.36rem 0.3rem;
+        min-height: 46px;
+        border-bottom: 1px solid rgba(64,51,140,0.06);
+        border-radius: 12px;
+        transition: background 0.15s ease;
+    }}
+    {row}:hover {{background: rgba(64,51,140,0.06);}}
     {row} [data-testid="stHorizontalBlock"],
     {header} [data-testid="stHorizontalBlock"],
-    {subrow} [data-testid="stHorizontalBlock"] {{gap: 6px !important; align-items: center;}}
+    {subrow} [data-testid="stHorizontalBlock"],
+    {total} [data-testid="stHorizontalBlock"] {{gap: 8px !important; align-items: center;}}
     {row} [data-testid="stVerticalBlock"],
-    {subrow} [data-testid="stVerticalBlock"] {{gap: 0 !important; min-width: 0;}}
+    {subrow} [data-testid="stVerticalBlock"],
+    {total} [data-testid="stVerticalBlock"] {{gap: 0 !important; min-width: 0;}}
     {row} :is([data-testid="stColumn"], [data-testid="column"]),
     {header} :is([data-testid="stColumn"], [data-testid="column"]),
-    {subrow} :is([data-testid="stColumn"], [data-testid="column"]) {{min-width: 0;}}
+    {subrow} :is([data-testid="stColumn"], [data-testid="column"]),
+    {total} :is([data-testid="stColumn"], [data-testid="column"]) {{min-width: 0;}}
     {row} [data-testid="stMarkdownContainer"] p,
-    {subrow} [data-testid="stMarkdownContainer"] p {{margin: 0;}}
+    {subrow} [data-testid="stMarkdownContainer"] p,
+    {total} [data-testid="stMarkdownContainer"] p {{margin: 0;}}
     {row} [data-testid="stButton"] button,
     {subrow} [data-testid="stButton"] button {{
-        min-height: 28px;
-        height: 28px;
-        padding: 2px 4px;
+        min-height: 32px;
+        height: 32px;
+        padding: 0.14rem 0.35rem;
         border: 1px solid transparent;
-        border-radius: 3px;
+        border-radius: 8px;
         background: transparent;
     }}
     {row} [data-testid="stButton"] button:hover,
-    {subrow} [data-testid="stButton"] button:hover {{background: rgba(128, 128, 128, 0.1);}}
-    {row} [data-testid="stButton"] button p {{
-        font-size: 0.875rem;
-        line-height: 1.3;
+    {subrow} [data-testid="stButton"] button:hover {{background: rgba(255,255,255,0.5); border-color: rgba(64,51,140,0.08);}}
+    {row} [data-testid="stButton"] button p,
+    {subrow} [data-testid="stButton"] button p {{
+        font-size: 0.84rem;
+        line-height: 1.32;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: block;
-        margin: 0;
+        display:block;
+        margin:0;
     }}
-    {row} [data-testid="stButton"] button [data-testid="stMarkdownContainer"] {{min-width: 0; overflow: hidden;}}
-    {row} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button {{justify-content: flex-start; text-align: left; font-weight: 600;}}
+    {row} [data-testid="stHorizontalBlock"] > :nth-child(3) [data-testid="stButton"] button {{
+        justify-content:flex-start;
+        text-align:left;
+        font-weight: 700;
+    }}
     {children} {{
-        margin: 0 0 6px 16px;
-        width: calc(100% - 16px);
-        padding: 2px 8px 4px 10px;
-        border-left: 2px solid rgba(128, 128, 128, 0.45);
-        background: rgba(128, 128, 128, 0.045);
+        margin: 0.12rem 0 0.42rem 1.18rem;
+        width: calc(100% - 1.18rem);
+        padding: 0.2rem 0.62rem 0.42rem 0.72rem;
+        border-left: 2px solid rgba(59,56,245,0.22);
+        background: rgba(255,255,255,0.58);
+        border-radius: 0 0 12px 12px;
     }}
-    {subrow} {{padding: 1px 0; min-height: 30px; border-bottom: 1px solid rgba(128, 128, 128, 0.12);}}
-    {subrow} [data-testid="stCheckbox"] {{min-height: 28px;}}
-    {subrow} [data-testid="stCheckbox"] label {{margin: 0; min-height: 28px;}}
-    {children} [data-testid="stExpander"] {{border: 0; margin-top: 2px; background: transparent;}}
-    {children} [data-testid="stExpander"] summary {{padding: 0.15rem 0;}}
-    {children} [data-testid="stExpander"] summary p {{font-size: 0.8rem;}}
-    {children} [data-testid="stForm"] {{padding: 0.5rem;}}
+    {subrow} {{
+        padding: 0.18rem 0.16rem;
+        min-height: 34px;
+        border-bottom: 1px solid rgba(64,51,140,0.08);
+    }}
+    {subrow}:last-child {{border-bottom: none;}}
+    {subrow} [data-testid="stCheckbox"] {{min-height: 30px;}}
+    {subrow} [data-testid="stCheckbox"] label {{margin: 0; min-height: 30px;}}
+    {children} [data-testid="stExpander"] {{border: 0; margin-top: 0.25rem; background: transparent; box-shadow: none;}}
+    {children} [data-testid="stExpander"] summary {{padding: 0.18rem 0;}}
+    {children} [data-testid="stExpander"] summary p {{font-size: 0.78rem; color: var(--pbm-primary-dark);}}
+    {children} [data-testid="stForm"] {{
+        padding: 0.6rem;
+        background: rgba(59,56,245,0.04);
+        border-radius: 12px;
+        border: 1px dashed rgba(59,56,245,0.14);
+        margin-top: 0.35rem;
+    }}
+    {total} {{
+        margin-top: 0.36rem;
+        padding: 0.3rem 0.3rem 0.15rem;
+        background: rgba(59,56,245,0.05);
+        border: 1px solid rgba(59,56,245,0.08);
+        border-radius: 12px;
+    }}
+    {total} .pbm-cell {{font-weight: 700;}}
+    {formcard} {{
+        background: rgba(255,255,255,0.84);
+        border: 1px solid var(--pbm-border);
+        border-radius: 18px;
+        padding: 1rem;
+        box-shadow: 0 10px 30px rgba(64,51,140,0.04);
+    }}
+    @media (max-width: 760px) {{
+        .block-container {{padding-left: 0.7rem; padding-right: 0.7rem;}}
+    }}
     """
-    # Only hexadecimal colors from settings are interpolated in CSS.
+
     for i, status in enumerate(data["statuses"]):
-        color = safe_color(data["status_colors"].get(status))
-        css += f'[data-testid="stExpander"]:has(.pbm-group-{i}) {{border-left: 3px solid {color};}}\n'
-    css += """
-    @media (max-width: 760px) {
-        .block-container {padding-left: 0.75rem; padding-right: 0.75rem;}
-    }
-    """
+        color = safe_color(data["status_colors"].get(status), PRIMARY)
+        css += f'[data-testid="stExpander"]:has(.pbm-group-{i}) {{border-left: 4px solid {color};}}\n'
+
+    for p in data.get("projects", []):
+        type_color = safe_color(data["type_colors"].get(p.get("type"), PRIMARY), PRIMARY)
+        css += (
+            f'{css_scope(f"rowclr-{p["id"]}")} '
+            '{'
+            f'background:{hex_to_rgba(type_color, 0.14)};'
+            f'box-shadow: inset 0 0 0 1px {hex_to_rgba(type_color, 0.18)};'
+            f'border-left: 4px solid {type_color};'
+            '}\n'
+            f'{css_scope(f"rowclr-{p["id"]}")}:hover '
+            '{'
+            f'background:{hex_to_rgba(type_color, 0.2)};'
+            '}\n'
+        )
+
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
@@ -180,14 +341,16 @@ def badge(text: str, color: str, text_color: str = "white") -> str:
     background = safe_color(color)
     foreground = text_color if text_color in ("white", "black") else safe_color(text_color)
     label = escape(str(text))
+    border = hex_to_rgba(background, 0.18)
     return (
         f'<span class="pbm-badge" title="{label}" '
-        f'style="background-color:{background};color:{foreground}">{label}</span>'
+        f'style="background-color:{hex_to_rgba(background, 0.16)};'
+        f'color:{foreground}; border-color:{border};">{label}</span>'
     )
 
 
 def cell(text, style: str = "", tooltip: str = ""):
-    value = str(text) if text is not None else "—"
+    value = str(text) if text not in (None, "") else "—"
     title = escape(tooltip or value, quote=True)
     st.markdown(
         f'<div class="pbm-cell {style}" title="{title}">{escape(value)}</div>',
@@ -211,15 +374,26 @@ def display_amount(value) -> str:
 def display_hours(value) -> str:
     return f"{float(value or 0):.1f} h".replace(".", ",")
 
-# ---------------------------------------------------------------------------
-# Connexion aux données partagées (base Supabase, configurée via les secrets)
-# ---------------------------------------------------------------------------
 
-with st.sidebar:
-    st.markdown("### ⚙️ Données")
-    st.caption("Connecté à la base de données partagée de l'équipe.")
-    if st.button("🔄 Rafraîchir les données"):
-        st.rerun()
+def project_number_markup(project: dict) -> str:
+    number = project.get("project_number") or "—"
+    return f'<span class="pbm-project-number">{escape(str(number))}</span>'
+
+
+def get_group_totals(projects_in_group: list[dict]) -> tuple[float, float]:
+    total_budget = sum(float(p.get("budget", 0) or 0) for p in projects_in_group)
+    total_hours = sum(float(p.get("estimated_time", 0) or 0) for p in projects_in_group)
+    return total_budget, total_hours
+
+
+def project_search_blob(project: dict) -> str:
+    return " ".join([
+        str(project.get("project_number") or ""),
+        str(project.get("name") or ""),
+        str(project.get("remarks") or ""),
+        str(project.get("type") or ""),
+    ]).casefold()
+
 
 try:
     data = db.load_data(PATH)
@@ -232,28 +406,54 @@ except Exception as e:
     st.exception(e)
     st.stop()
 
-inject_compact_styles()
-st.title("Pôle BOIS/METAL - Suivi de projets")
+inject_brand_styles(data)
 
-# ---------------------------------------------------------------------------
-# Modale d'édition d'un projet
-# ---------------------------------------------------------------------------
+
+def render_header():
+    with ui_container("top_actionbar", "actionbar"):
+        c1, c2, c3 = st.columns([1.35, 4.2, 1.1], vertical_alignment="center")
+        with c1:
+            if LOGO_PATH.exists():
+                st.image(str(LOGO_PATH), use_container_width=True)
+        with c2:
+            st.markdown(
+                """
+                <div class="pbm-headline">
+                    <div class="pbm-eyebrow">Builders · verticalsea</div>
+                    <h1>Suivi de projets bâtiment</h1>
+                    <div class="pbm-subline">Tableau de bord compact, filtrable et aligné sur la charte graphique.</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with c3:
+            st.write("")
+            if st.button("🔄 Rafraîchir", use_container_width=True):
+                st.rerun()
+
+
+render_header()
+
 
 @st.dialog("Modifier le projet")
 def edit_project_dialog(p: dict):
     with st.form(f"dialog_edit_{p['id']}"):
-        name = st.text_input("Nom du projet", value=p["name"])
+        c0, c1, c2 = st.columns([1, 1.2, 1.2])
+        project_number = c0.text_input("N° projet", value=str(p.get("project_number") or ""))
+        name = c1.text_input("Nom du projet", value=p["name"])
+        type_options = ["(aucun)"] + data["types"]
+        current_type = p.get("type") or "(aucun)"
+        type_idx = type_options.index(current_type) if current_type in type_options else 0
+        project_type = c2.selectbox("Type", type_options, index=type_idx)
+
         col1, col2 = st.columns(2)
         with col1:
-            type_options = ["(aucun)"] + data["types"]
-            current_type = p.get("type") or "(aucun)"
-            type_idx = type_options.index(current_type) if current_type in type_options else 0
-            project_type = st.selectbox("Type", type_options, index=type_idx)
             status = st.selectbox(
                 "Statut", data["statuses"], index=data["statuses"].index(p["status"])
             )
             assigned = st.multiselect(
-                "Personnes assignées", data["collaborators"],
+                "Personnes assignées",
+                data["collaborators"],
                 default=[a for a in p.get("assigned", []) if a in data["collaborators"]],
             )
             estimated_time = st.number_input(
@@ -279,14 +479,15 @@ def edit_project_dialog(p: dict):
                 "Budget (€)", min_value=0.0, step=100.0,
                 value=float(p.get("budget", 0.0)),
             )
-        remarks = st.text_area("Remarques", value=p.get("remarks", ""))
+        remarks = st.text_area("Remarques", value=p.get("remarks", ""), height=120)
 
-        c1, c2 = st.columns(2)
-        save = c1.form_submit_button("💾 Enregistrer", use_container_width=True)
-        delete = c2.form_submit_button("🗑️ Supprimer le projet", use_container_width=True)
+        b1, b2 = st.columns(2)
+        save = b1.form_submit_button("💾 Enregistrer", use_container_width=True)
+        delete = b2.form_submit_button("🗑️ Supprimer le projet", use_container_width=True)
 
     if save:
         db.update_project(PATH, p["id"], {
+            "project_number": project_number.strip() or None,
             "name": name,
             "type": None if project_type == "(aucun)" else project_type,
             "status": status,
@@ -302,6 +503,7 @@ def edit_project_dialog(p: dict):
         db.delete_project(PATH, p["id"])
         st.rerun()
 
+
 tab_board, tab_add, tab_calendar, tab_gantt, tab_settings = st.tabs(
     ["Tableau", "Nouveau projet", "Calendrier", "Gantt", "Paramètres"]
 )
@@ -315,7 +517,7 @@ def render_subtasks(p: dict):
             st.caption("Aucune sous-tâche.")
         for i, s in enumerate(subtasks):
             with ui_container(f"pbm_subrow_{s['id']}", "subrow"):
-                sc = st.columns([0.35, 0.35, 0.4, 3.6, 2, 1, 0.4], gap="small", vertical_alignment="center")
+                sc = st.columns([0.34, 0.34, 0.38, 3.5, 1.8, 0.95, 0.38], gap="small", vertical_alignment="center")
                 if sc[0].button("▴", key=f"subup_{s['id']}", disabled=(i == 0), help="Monter"):
                     db.move_subtask(PATH, pid, s["id"], -1)
                     st.rerun()
@@ -339,7 +541,6 @@ def render_subtasks(p: dict):
                     db.delete_subtask(PATH, pid, s["id"])
                     st.rerun()
 
-        # Keep the creation form out of the way until explicitly opened.
         add_key = f"show_add_subtask_{pid}"
         if add_key not in st.session_state:
             st.session_state[add_key] = False
@@ -349,7 +550,7 @@ def render_subtasks(p: dict):
             st.rerun()
         if st.session_state[add_key]:
             with st.form(f"add_subtask_{pid}", clear_on_submit=True):
-                fc1, fc2, fc3, fc4 = st.columns([3, 2, 1.3, 1])
+                fc1, fc2, fc3, fc4 = st.columns([3.1, 2, 1.2, 1])
                 sub_name = fc1.text_input(
                     "Nouvelle sous-tâche", label_visibility="collapsed",
                     placeholder="Nouvelle sous-tâche",
@@ -374,72 +575,112 @@ def render_project_row(p: dict):
         st.session_state[expand_key] = False
 
     with ui_container(f"pbm_project_{pid}", "project"):
-        with ui_container(f"pbm_row_{pid}", "row"):
+        with ui_container(f"pbm_row_{pid}", ["row", f"rowclr-{pid}"]):
             cols = st.columns(ROW_WIDTHS, gap="small", vertical_alignment="center")
             arrow = "▾" if st.session_state[expand_key] else "▸"
             if cols[0].button(arrow, key=f"arrow_{pid}", help="Afficher / masquer les sous-tâches"):
                 st.session_state[expand_key] = not st.session_state[expand_key]
                 st.rerun()
-            # The project name is the edit action: no duplicate pencil column.
-            if cols[1].button(p["name"], key=f"name_{pid}", use_container_width=True, help=p["name"]):
+            with cols[1]:
+                st.markdown(project_number_markup(p), unsafe_allow_html=True)
+            if cols[2].button(p["name"], key=f"name_{pid}", use_container_width=True, help=p["name"]):
                 edit_project_dialog(p)
-            with cols[2]:
+            with cols[3]:
                 ptype = p.get("type")
                 if ptype:
-                    st.markdown(badge(ptype, data["type_colors"].get(ptype, "#eeeeee"), "#3b3b3b"), unsafe_allow_html=True)
+                    st.markdown(badge(ptype, data["type_colors"].get(ptype, PRIMARY_DARK), PRIMARY_DARK), unsafe_allow_html=True)
                 else:
                     cell("—")
-            with cols[3]:
-                cell(", ".join(p.get("assigned", [])) or "—")
             with cols[4]:
-                st.markdown(badge(p["status"], data["status_colors"].get(p["status"], "#579bfc")), unsafe_allow_html=True)
+                cell(", ".join(p.get("assigned", [])) or "—")
             with cols[5]:
-                cell(display_date(p.get("due_date")))
+                st.markdown(badge(p["status"], data["status_colors"].get(p["status"], PRIMARY), "white"), unsafe_allow_html=True)
             with cols[6]:
-                cell(display_amount(p.get("budget")), "number")
+                cell(display_date(p.get("due_date")))
             with cols[7]:
-                cell(display_hours(p.get("estimated_time")), "number")
+                cell(display_amount(p.get("budget")), "number")
             with cols[8]:
+                cell(display_hours(p.get("estimated_time")), "number")
+            with cols[9]:
                 subtasks = p.get("subtasks", [])
                 done = sum(1 for s in subtasks if s.get("done"))
                 cell(
-                    f"{done}/{len(subtasks)}" if subtasks else "—", "progress",
+                    f"{done}/{len(subtasks)}" if subtasks else "—",
+                    "progress",
                     f"{done} sur {len(subtasks)} sous-tâches terminées",
                 )
         if st.session_state[expand_key]:
             render_subtasks(p)
 
 
+def render_group_total_row(projects_in_group: list[dict]):
+    total_budget, total_hours = get_group_totals(projects_in_group)
+    with ui_container(f"pbm_total_{hash(tuple(p['id'] for p in projects_in_group))}", "total"):
+        cols = st.columns(TOTAL_WIDTHS, gap="small", vertical_alignment="center")
+        with cols[2]:
+            cell("TOTAL DU GROUPE")
+        with cols[6]:
+            cell(f"{len(projects_in_group)} projet{'s' if len(projects_in_group) > 1 else ''}")
+        with cols[7]:
+            cell(display_amount(total_budget), "number")
+        with cols[8]:
+            cell(display_hours(total_hours), "number")
+
+
 with tab_board:
     with ui_container("pbm_board", "board"):
-        fc = st.columns([2.5, 1.4, 1.4, 1.4], gap="small")
-        query = fc[0].text_input(
-            "Rechercher un projet", placeholder="Rechercher un projet...",
+        stats = st.columns(4)
+        total_projects = len(data["projects"])
+        total_budget_all = sum(float(p.get("budget", 0) or 0) for p in data["projects"])
+        total_hours_all = sum(float(p.get("estimated_time", 0) or 0) for p in data["projects"])
+        stats[0].markdown(
+            f'<div class="pbm-summary-card"><div class="pbm-summary-label">Projets</div><strong>{total_projects}</strong></div>',
+            unsafe_allow_html=True,
+        )
+        stats[1].markdown(
+            f'<div class="pbm-summary-card"><div class="pbm-summary-label">Budget cumulé</div><strong>{display_amount(total_budget_all)}</strong></div>',
+            unsafe_allow_html=True,
+        )
+        stats[2].markdown(
+            f'<div class="pbm-summary-card"><div class="pbm-summary-label">Heures cumulées</div><strong>{display_hours(total_hours_all)}</strong></div>',
+            unsafe_allow_html=True,
+        )
+        stats[3].markdown(
+            f'<div class="pbm-summary-card"><div class="pbm-summary-label">Groupes</div><strong>{len(data["statuses"])}</strong></div>',
+            unsafe_allow_html=True,
+        )
+
+        st.write("")
+        filters = st.columns([1.5, 1.0, 1.0, 1.0], gap="small")
+        query = filters[0].text_input(
+            "Rechercher un projet", placeholder="Rechercher nom, numéro, remarques...",
             label_visibility="collapsed", key="pbm_search",
         ).strip().casefold()
-        person_filter = fc[1].selectbox(
+        person_filter = filters[1].selectbox(
             "Collaborateur", [None] + data["collaborators"],
             format_func=lambda x: "Tous les collaborateurs" if x is None else x,
             label_visibility="collapsed", key="pbm_person",
         )
-        status_filter = fc[2].selectbox(
+        status_filter = filters[2].selectbox(
             "Statut", [None] + data["statuses"],
             format_func=lambda x: "Tous les statuts" if x is None else x,
             label_visibility="collapsed", key="pbm_status",
         )
-        type_filter = fc[3].selectbox(
+        type_filter = filters[3].selectbox(
             "Type", [None] + data["types"],
             format_func=lambda x: "Tous les types" if x is None else x,
             label_visibility="collapsed", key="pbm_type",
         )
+
         projects = [
             p for p in data["projects"]
-            if (not query or query in (p.get("name", "") + " " + (p.get("remarks") or "")).casefold())
+            if (not query or query in project_search_blob(p))
             and (person_filter is None or person_filter in p.get("assigned", []))
             and (status_filter is None or p.get("status") == status_filter)
             and (type_filter is None or p.get("type") == type_filter)
         ]
         active_filters = bool(query or person_filter is not None or status_filter is not None or type_filter is not None)
+
         if not data["projects"]:
             st.info("Aucun projet. Utilisez l'onglet Nouveau projet pour en créer un.")
         elif not projects:
@@ -450,7 +691,11 @@ with tab_board:
             if active_filters and not projects_in_group:
                 continue
             count = len(projects_in_group)
-            title = f"{status}  ·  {count} projet{'s' if count != 1 else ''}"
+            total_budget, total_hours = get_group_totals(projects_in_group)
+            title = (
+                f"{status} · {count} projet{'s' if count != 1 else ''}"
+                f" · {display_amount(total_budget)} · {display_hours(total_hours)}"
+            )
             with st.expander(title, expanded=bool(projects_in_group)):
                 with ui_container(f"pbm_group_{group_index}", "group"):
                     st.markdown(f'<span class="pbm-marker pbm-group-{group_index}"></span>', unsafe_allow_html=True)
@@ -461,61 +706,52 @@ with tab_board:
                         header_cols = st.columns(ROW_WIDTHS, gap="small", vertical_alignment="center")
                         for idx, (c, label) in enumerate(zip(header_cols, ROW_LABELS)):
                             with c:
-                                cell(label, "number" if idx in (6, 7) else "progress" if idx == 8 else "")
+                                cell(label, "number" if idx in (7, 8) else "progress" if idx == 9 else "")
                     for p in projects_in_group:
                         render_project_row(p)
-                    total_budget = sum(p.get("budget", 0) or 0 for p in projects_in_group)
-                    total_time = sum(p.get("estimated_time", 0) or 0 for p in projects_in_group)
-                    st.markdown(
-                        '<div class="pbm-summary">Total des projets affichés : '
-                        f'{display_amount(total_budget)} · {display_hours(total_time)}</div>',
-                        unsafe_allow_html=True,
-                    )
-
-# ---------------------------------------------------------------------------
-# Onglet Nouveau projet
-# ---------------------------------------------------------------------------
+                    render_group_total_row(projects_in_group)
 
 with tab_add:
-    st.subheader("Créer un nouveau projet")
-    with st.form("new_project_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            name = st.text_input("Nom du projet *")
+    with ui_container("pbm_form_add", "formcard"):
+        st.subheader("Créer un nouveau projet")
+        with st.form("new_project_form", clear_on_submit=True):
+            top = st.columns([1, 1.6, 1.2])
+            project_number = top[0].text_input("N° projet")
+            name = top[1].text_input("Nom du projet *")
             type_options = ["(aucun)"] + data["types"]
-            project_type = st.selectbox("Type de projet", type_options)
-            status = st.selectbox("Statut / groupe", data["statuses"])
-            assigned = st.multiselect("Personnes assignées", data["collaborators"])
-            estimated_time = st.number_input("Temps estimé (h)", min_value=0.0, step=0.5)
-        with col2:
-            start_date_val = st.date_input("Date de début (optionnel)", value=None)
-            due_date_val = st.date_input("Date d'échéance", value=date.today())
-            budget = st.number_input("Budget (€)", min_value=0.0, step=100.0)
-            remarks = st.text_area("Remarques")
+            project_type = top[2].selectbox("Type de projet", type_options)
 
-        submitted = st.form_submit_button("➕ Créer le projet")
-        if submitted:
-            if not name.strip():
-                st.error("Le nom du projet est obligatoire.")
-            else:
-                project = db.new_project_dict(
-                    name=name,
-                    status=status,
-                    assigned=assigned,
-                    estimated_time=estimated_time,
-                    start_date=start_date_val.isoformat() if start_date_val else None,
-                    due_date=due_date_val.isoformat() if due_date_val else None,
-                    budget=budget,
-                    remarks=remarks,
-                    project_type=None if project_type == "(aucun)" else project_type,
-                )
-                db.add_project(PATH, project)
-                st.success(f"Projet « {name} » créé.")
-                st.rerun()
+            col1, col2 = st.columns(2)
+            with col1:
+                status = st.selectbox("Statut / groupe", data["statuses"])
+                assigned = st.multiselect("Personnes assignées", data["collaborators"])
+                estimated_time = st.number_input("Temps estimé (h)", min_value=0.0, step=0.5)
+            with col2:
+                start_date_val = st.date_input("Date de début (optionnel)", value=None)
+                due_date_val = st.date_input("Date d'échéance", value=date.today())
+                budget = st.number_input("Budget (€)", min_value=0.0, step=100.0)
+            remarks = st.text_area("Remarques", height=120)
 
-# ---------------------------------------------------------------------------
-# Onglet Calendrier
-# ---------------------------------------------------------------------------
+            submitted = st.form_submit_button("➕ Créer le projet")
+            if submitted:
+                if not name.strip():
+                    st.error("Le nom du projet est obligatoire.")
+                else:
+                    project = db.new_project_dict(
+                        name=name,
+                        status=status,
+                        assigned=assigned,
+                        estimated_time=estimated_time,
+                        start_date=start_date_val.isoformat() if start_date_val else None,
+                        due_date=due_date_val.isoformat() if due_date_val else None,
+                        budget=budget,
+                        remarks=remarks,
+                        project_type=None if project_type == "(aucun)" else project_type,
+                    )
+                    project["project_number"] = project_number.strip() or None
+                    db.add_project(PATH, project)
+                    st.success(f"Projet « {name} » créé.")
+                    st.rerun()
 
 with tab_calendar:
     st.subheader("Vue calendrier (par date d'échéance)")
@@ -534,8 +770,7 @@ with tab_calendar:
         st.session_state.cal_month, st.session_state.cal_year = m, y
         st.rerun()
     nav2.markdown(
-        f"<h4 style='text-align:center'>{cal.month_name[st.session_state.cal_month]} "
-        f"{st.session_state.cal_year}</h4>",
+        f"<h4 style='text-align:center; color:{PRIMARY_DARK}'>{cal.month_name[st.session_state.cal_month]} {st.session_state.cal_year}</h4>",
         unsafe_allow_html=True,
     )
     if nav3.button("Mois suivant ▶"):
@@ -566,17 +801,14 @@ with tab_calendar:
                 day_str = date(st.session_state.cal_year, st.session_state.cal_month, day).isoformat()
                 st.markdown(f"**{day}**")
                 for p in by_day.get(day_str, []):
-                    color = safe_color(data["status_colors"].get(p["status"], "#579bfc"))
+                    color = safe_color(data["type_colors"].get(p.get("type"), PRIMARY))
                     st.markdown(
-                        f"<div style='background-color:{color};color:white;"
-                        f"border-radius:3px;padding:1px 4px;font-size:0.7em;margin-bottom:2px'>"
-                        f"{escape(p['name'])}</div>",
+                        f"<div style='background-color:{hex_to_rgba(color, 0.14)}; color:{TEXT};"
+                        f"border-left:4px solid {color}; border-radius:8px; padding:3px 6px;"
+                        f"font-size:0.74em; margin-bottom:4px'>"
+                        f"<strong>{escape(str(p.get('project_number') or '—'))}</strong> · {escape(p['name'])}</div>",
                         unsafe_allow_html=True,
                     )
-
-# ---------------------------------------------------------------------------
-# Onglet Gantt
-# ---------------------------------------------------------------------------
 
 with tab_gantt:
     st.subheader("Vue Gantt / échéancier")
@@ -594,7 +826,7 @@ with tab_gantt:
         if start >= end:
             start = end - timedelta(days=1)
         rows.append({
-            "Projet": p["name"],
+            "Projet": f"{p.get('project_number') or '—'} · {p['name']}",
             "Début": start,
             "Fin": end,
             "Statut": p["status"],
@@ -608,16 +840,20 @@ with tab_gantt:
         df = pd.DataFrame(rows)
         color_map = data["status_colors"]
         fig = px.timeline(
-            df, x_start="Début", x_end="Fin", y="Projet", color="Statut",
+            df,
+            x_start="Début",
+            x_end="Fin",
+            y="Projet",
+            color="Statut",
             color_discrete_map=color_map,
             hover_data=["Type", "Assigné"],
         )
         fig.update_yaxes(autorange="reversed")
-        fig.update_layout(height=max(300, 40 * len(df)))
+        fig.update_layout(height=max(320, 40 * len(df)))
         st.plotly_chart(fig, use_container_width=True)
 
 with tab_settings:
-    settings_cols = st.columns([1, 1.2, 1.2], gap="medium")
+    settings_cols = st.columns([1, 1.15, 1.15], gap="medium")
     with settings_cols[0]:
         st.markdown("### 👥 Collaborateurs")
         for person in data["collaborators"]:
@@ -638,7 +874,7 @@ with tab_settings:
         for i, status in enumerate(data["statuses"]):
             c1, c2, c3, c4 = st.columns([3, 0.7, 0.7, 0.7])
             c1.markdown(
-                badge(status, data["status_colors"].get(status, "#579bfc"), "white"),
+                badge(status, data["status_colors"].get(status, PRIMARY), "white"),
                 unsafe_allow_html=True,
             )
             if c2.button("▲", key=f"statusup_{status}", disabled=(i == 0)):
@@ -653,7 +889,7 @@ with tab_settings:
                 st.rerun()
         with st.form("add_status_form", clear_on_submit=True):
             new_status = st.text_input("Nouveau statut / groupe")
-            new_color = st.color_picker("Couleur", value="#579bfc")
+            new_color = st.color_picker("Couleur", value=PRIMARY)
             if st.form_submit_button("Ajouter") and new_status.strip():
                 db.add_status(PATH, new_status, new_color)
                 st.rerun()
@@ -664,7 +900,7 @@ with tab_settings:
         for i, t in enumerate(data["types"]):
             c1, c2, c3, c4 = st.columns([3, 0.7, 0.7, 0.7])
             c1.markdown(
-                badge(t, data["type_colors"].get(t, "#eeeeee"), "#3b3b3b"),
+                badge(t, data["type_colors"].get(t, PRIMARY_DARK), PRIMARY_DARK),
                 unsafe_allow_html=True,
             )
             if c2.button("▲", key=f"typeup_{t}", disabled=(i == 0)):
@@ -682,4 +918,3 @@ with tab_settings:
             if st.form_submit_button("Ajouter") and new_type.strip():
                 db.add_type(PATH, new_type.strip().upper(), new_type_color)
                 st.rerun()
-
