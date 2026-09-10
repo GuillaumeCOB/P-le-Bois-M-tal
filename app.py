@@ -110,14 +110,14 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-text);
     }}
     .block-container {{
-        padding-top: 1.1rem;
+        padding-top: 0.55rem;
         padding-bottom: 1.25rem;
         padding-left: 1.25rem;
         padding-right: 1.25rem;
         max-width: none;
     }}
     h1, h2, h3 {{color: var(--pbm-primary-dark); letter-spacing: -0.02em;}}
-    h1 {{font-size: 1.55rem !important; padding: 0 !important; margin: 0 !important;}}
+    h1 {{font-size: 1.35rem !important; line-height: 1.12 !important; padding: 0 !important; margin: 0 !important;}}
     h3 {{font-size: 1rem !important;}}
     {nav} {{
         margin: 0rem 0 0rem 0;
@@ -158,9 +158,9 @@ def inject_brand_styles(data: dict):
     [data-testid="stDownloadButton"] button {{
         border-radius: 10px;
     }}
-    .pbm-headline {{display:flex; flex-direction:column; gap:0.15rem;}}
-    .pbm-eyebrow {{color: var(--pbm-primary); font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em;}}
-    .pbm-subline {{color: var(--pbm-muted); font-size: 0.85rem;}}
+    .pbm-headline {{display:flex; flex-direction:column; gap:0.05rem;}}
+    .pbm-eyebrow {{color: var(--pbm-primary); font-weight: 700; font-size: 0.72rem; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.08em;}}
+    .pbm-subline {{color: var(--pbm-muted); font-size: 0.78rem; line-height: 1.15;}}
     .pbm-badge {{
         display: inline-flex;
         align-items: center;
@@ -278,12 +278,21 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-primary-dark);
     }}
     {actionbar} {{
-        padding: 0.9rem 1rem 0.7rem;
-        margin-bottom: 0.55rem;
+        padding: 0.42rem 0.75rem 0.38rem;
+        margin-bottom: 0.35rem;
         background: rgba(255,255,255,0.84);
         border: 1px solid var(--pbm-border);
-        border-radius: 18px;
-        box-shadow: 0 8px 28px rgba(64,51,140,0.05);
+        border-radius: 15px;
+        box-shadow: 0 6px 20px rgba(64,51,140,0.045);
+    }}
+    {actionbar} [data-testid="stHorizontalBlock"] {{
+        min-height: 58px !important;
+        align-items: center !important;
+    }}
+    {actionbar} [data-testid="stImage"] img {{
+        max-height: 52px !important;
+        width: auto !important;
+        object-fit: contain !important;
     }}
     {board} {{gap: 0.45rem !important;}}
     {board} [data-testid="stExpander"] {{
@@ -590,7 +599,7 @@ inject_brand_styles(data)
 
 def render_header():
     with ui_container("top_actionbar", "actionbar"):
-        c1, c2, c3 = st.columns([1.35, 4.2, 1.1], vertical_alignment="center")
+        c1, c2, c3 = st.columns([0.95, 4.75, 1.0], vertical_alignment="center")
         with c1:
             if LOGO_PATH.exists():
                 st.image(str(LOGO_PATH), use_container_width=True)
@@ -796,7 +805,7 @@ def render_project_row(p: dict):
             with cols[4]:
                 cell(", ".join(p.get("assigned", [])) or "—")
             with cols[5]:
-                badge_cell(p["status"], data["status_colors"].get(p["status"], PRIMARY), "white")
+                badge_cell(p["status"], data["status_colors"].get(p["status"], PRIMARY), PRIMARY_DARK)
             with cols[6]:
                 cell(display_date(p.get("due_date")))
             with cols[7]:
@@ -1040,7 +1049,7 @@ if active_page == "Paramètres":
         for i, status in enumerate(data["statuses"]):
             c1, c2, c3, c4 = st.columns([3, 0.7, 0.7, 0.7])
             c1.markdown(
-                badge(status, data["status_colors"].get(status, PRIMARY), "white"),
+                badge(status, data["status_colors"].get(status, PRIMARY), PRIMARY_DARK),
                 unsafe_allow_html=True,
             )
             if c2.button("▲", key=f"statusup_{status}", disabled=(i == 0)):
