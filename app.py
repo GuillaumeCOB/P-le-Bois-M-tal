@@ -21,7 +21,7 @@ import streamlit as st
 import storage as db
 
 st.set_page_config(
-    page_title="Builders verticalsea - Gestion de projets",
+    page_title="Builders - Verticalsea - Gestion Pôle BOIS",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -617,7 +617,7 @@ def render_header():
                 """
                 <div class="pbm-headline">
                     <div class="pbm-eyebrow">Builders · verticalsea</div>
-                    <h1>Suivi de projets bâtiment</h1>
+                    <h1>Suivi de projets - Structures Bois et Métal</h1>
                     <div class="pbm-subline">Tableau de bord compact, filtrable et aligné sur la charte graphique.</div>
                 </div>
                 """,
