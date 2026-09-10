@@ -93,6 +93,7 @@ def inject_brand_styles(data: dict):
     subrow = css_scope("subrow")
     actionbar = css_scope("actionbar")
     formcard = css_scope("formcard")
+    nav = css_scope("nav")
 
     css = f"""
     :root {{
@@ -118,44 +119,37 @@ def inject_brand_styles(data: dict):
     h1, h2, h3 {{color: var(--pbm-primary-dark); letter-spacing: -0.02em;}}
     h1 {{font-size: 1.55rem !important; padding: 0 !important; margin: 0 !important;}}
     h3 {{font-size: 1rem !important;}}
-    [data-testid="stTabs"] [role="tablist"],
-    [data-testid="stTabs"] [data-baseweb="tab-list"] {{
-        gap: 0.55rem !important;
+    {nav} {{
+        margin: 0.45rem 0 0.75rem 0;
         padding: 0 !important;
-        background: transparent !important;
-        border: none !important;
-        border-radius: 0 !important;
-        width: auto !important;
-        box-shadow: none !important;
+        gap: 0 !important;
     }}
-    [data-testid="stTabs"] button[role="tab"],
-    [data-testid="stTabs"] [data-baseweb="tab"] {{
-        min-height: 2.45rem !important;
-        height: 2.45rem !important;
-        padding: 0 1rem !important;
-        margin: 0 !important;
-        background: #ffffff !important;
-        border: 1px solid rgba(59, 56, 245, 0.14) !important;
+    {nav} [data-testid="stHorizontalBlock"] {{
+        gap: 0.55rem !important;
+        align-items: center !important;
+    }}
+    {nav} [data-testid="stButton"] button {{
+        min-height: 2.5rem !important;
+        height: 2.5rem !important;
+        padding: 0 0.9rem !important;
         border-radius: 12px !important;
-        box-shadow: 0 2px 6px rgba(64, 51, 140, 0.05) !important;
+        border: 1px solid rgba(59, 56, 245, 0.22) !important;
+        box-shadow: 0 2px 7px rgba(64, 51, 140, 0.05) !important;
+        font-weight: 650 !important;
+    }}
+    {nav} [data-testid="stButton"] button[kind="secondary"] {{
+        background: #ffffff !important;
         color: var(--pbm-text) !important;
     }}
-    [data-testid="stTabs"] button[role="tab"] p,
-    [data-testid="stTabs"] [data-baseweb="tab"] p {{
-        margin: 0 !important;
-        font-size: 0.89rem !important;
-        font-weight: 600 !important;
-    }}
-    [data-testid="stTabs"] button[role="tab"][aria-selected="true"],
-    [data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] {{
-        background: rgba(59, 56, 245, 0.12) !important;
-        border-color: rgba(59, 56, 245, 0.28) !important;
+    {nav} [data-testid="stButton"] button[kind="primary"] {{
+        background: rgba(59, 56, 245, 0.13) !important;
         color: var(--pbm-primary-dark) !important;
-        box-shadow: inset 0 0 0 1px rgba(59, 56, 245, 0.04), 0 2px 8px rgba(64, 51, 140, 0.06) !important;
+        border-color: rgba(59, 56, 245, 0.38) !important;
     }}
-    [data-testid="stTabs"] [data-baseweb="tab-highlight"],
-    [data-testid="stTabs"] [data-baseweb="tab-border"] {{
-        display: none !important;
+    {nav} [data-testid="stButton"] button p {{
+        margin: 0 !important;
+        white-space: nowrap !important;
+        font-size: 0.88rem !important;
     }}
     :is(.element-container, [data-testid="stElementContainer"]):has(.pbm-marker) {{
         display: none !important;
@@ -662,9 +656,28 @@ def edit_project_dialog(p: dict):
         st.rerun()
 
 
-tab_board, tab_add, tab_calendar, tab_gantt, tab_settings = st.tabs(
-    ["Tableau", "Nouveau projet", "Calendrier", "Gantt", "Paramètres"]
-)
+def _set_active_page(page_name: str):
+    st.session_state["pbm_active_page"] = page_name
+
+
+if "pbm_active_page" not in st.session_state:
+    st.session_state["pbm_active_page"] = "Tableau"
+
+with ui_container("pbm_main_navigation", "nav"):
+    nav_cols = st.columns([1.0, 1.45, 1.1, 0.85, 1.15, 5.0], gap="small")
+    nav_items = ["Tableau", "Nouveau projet", "Calendrier", "Gantt", "Paramètres"]
+    for col, page_name in zip(nav_cols[:5], nav_items):
+        with col:
+            st.button(
+                page_name,
+                key=f"nav_{page_name}",
+                use_container_width=True,
+                type="primary" if st.session_state["pbm_active_page"] == page_name else "secondary",
+                on_click=_set_active_page,
+                args=(page_name,),
+            )
+
+active_page = st.session_state["pbm_active_page"]
 
 
 def render_subtasks(p: dict):
@@ -779,7 +792,7 @@ def render_group_total_row(projects_in_group: list[dict]):
     render_group_total_html(projects_in_group)
 
 
-with tab_board:
+if active_page == "Tableau":
     with ui_container("pbm_board", "board"):
         filters = st.columns([1.5, 1.0, 1.0, 1.0], gap="small")
         query = filters[0].text_input(
@@ -833,11 +846,15 @@ with tab_board:
                         st.caption("Aucun projet dans ce groupe.")
                         continue
                     render_group_header()
+                    st.markdown(
+                        '<div style="height:10px;line-height:10px"></div>',
+                        unsafe_allow_html=True,
+                    )
                     for p in projects_in_group:
                         render_project_row(p)
                     render_group_total_row(projects_in_group)
 
-with tab_add:
+if active_page == "Nouveau projet":
     with ui_container("pbm_form_add", "formcard"):
         st.subheader("Créer un nouveau projet")
         with st.form("new_project_form", clear_on_submit=True):
@@ -879,7 +896,7 @@ with tab_add:
                     st.success(f"Projet « {name} » créé.")
                     st.rerun()
 
-with tab_calendar:
+if active_page == "Calendrier":
     st.subheader("Vue calendrier (par date d'échéance)")
 
     if "cal_month" not in st.session_state:
@@ -936,7 +953,7 @@ with tab_calendar:
                         unsafe_allow_html=True,
                     )
 
-with tab_gantt:
+if active_page == "Gantt":
     st.subheader("Vue Gantt / échéancier")
 
     rows = []
@@ -978,7 +995,7 @@ with tab_gantt:
         fig.update_layout(height=max(320, 40 * len(df)))
         st.plotly_chart(fig, use_container_width=True)
 
-with tab_settings:
+if active_page == "Paramètres":
     settings_cols = st.columns([1, 1.15, 1.15], gap="medium")
     with settings_cols[0]:
         st.markdown("### 👥 Collaborateurs")
