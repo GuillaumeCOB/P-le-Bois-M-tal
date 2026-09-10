@@ -459,7 +459,7 @@ def inject_brand_styles(data: dict):
         font-weight: 800;
         letter-spacing: 0.055em;
         text-transform: uppercase;
-        margin: 0 0 0.55rem 0.08rem;
+        margin: 0 0 0.80rem 0.08rem;
     }}
     {summary} [data-testid="stButton"] button {{
         min-height: 2.05rem !important;
