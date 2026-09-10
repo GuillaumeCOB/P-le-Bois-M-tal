@@ -111,7 +111,7 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-text);
     }}
     .block-container {{
-        padding-top: 5rem;
+        padding-top: 3rem;
         padding-bottom: 1.25rem;
         padding-left: 1.25rem;
         padding-right: 1.25rem;
@@ -509,7 +509,25 @@ def inject_brand_styles(data: dict):
 
     for i, status in enumerate(data["statuses"]):
         color = safe_color(data["status_colors"].get(status), PRIMARY)
-        css += f'[data-testid="stExpander"]:has(.pbm-group-{i}) {{border-left: 4px solid {color};}}\n'
+        # Liseré de statut sur le côté gauche de chaque groupe du tableau principal.
+        # Le pseudo-élément garantit un rendu identique à la synthèse de gauche.
+        css += (
+            f'[data-testid="stExpander"]:has(.pbm-group-{i}) {{'
+            'position: relative !important;'
+            'overflow: hidden !important;'
+            '}\n'
+            f'[data-testid="stExpander"]:has(.pbm-group-{i})::before {{'
+            'content: "";'
+            'position: absolute;'
+            'left: 0;'
+            'top: 0;'
+            'bottom: 0;'
+            'width: 4px;'
+            f'background: {color};'
+            'z-index: 3;'
+            'pointer-events: none;'
+            '}\n'
+        )
         side_scope = css_scope(f"summary-{i}")
         css += (
             f'{side_scope} {{'
