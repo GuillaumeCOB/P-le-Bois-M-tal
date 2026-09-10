@@ -517,7 +517,7 @@ def render_subtasks(p: dict):
             st.caption("Aucune sous-tâche.")
         for i, s in enumerate(subtasks):
             with ui_container(f"pbm_subrow_{s['id']}", "subrow"):
-                sc = st.columns([0.34, 0.34, 0.38, 3.5, 1.8, 0.95, 0.38], gap="small", vertical_alignment="center")
+                sc = st.columns([0.34, 0.34, 0.38, 3.90, 1.55, 1.15, 1.00, 0.95, 0.38], gap="small", vertical_alignment="center")
                 if sc[0].button("▴", key=f"subup_{s['id']}", disabled=(i == 0), help="Monter"):
                     db.move_subtask(PATH, pid, s["id"], -1)
                     st.rerun()
@@ -536,8 +536,12 @@ def render_subtasks(p: dict):
                 with sc[4]:
                     cell(", ".join(s.get("assigned", [])) or "—")
                 with sc[5]:
+                    cell("")
+                with sc[6]:
+                    cell("")
+                with sc[7]:
                     cell(display_hours(s.get("estimated_time")), "number")
-                if sc[6].button("×", key=f"subdel_{s['id']}", help="Supprimer la sous-tâche"):
+                if sc[8].button("×", key=f"subdel_{s['id']}", help="Supprimer la sous-tâche"):
                     db.delete_subtask(PATH, pid, s["id"])
                     st.rerun()
 
@@ -650,7 +654,7 @@ with tab_board:
             unsafe_allow_html=True,
         )
 
-        st.write("")
+        st.markdown("<div style='height:0.42rem'></div>", unsafe_allow_html=True)
         filters = st.columns([1.5, 1.0, 1.0, 1.0], gap="small")
         query = filters[0].text_input(
             "Rechercher un projet", placeholder="Rechercher nom, numéro, remarques...",
