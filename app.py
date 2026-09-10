@@ -488,9 +488,9 @@ def inject_brand_styles(data: dict):
         text-overflow: ellipsis !important;
     }}
     {summary} .pbm-side-budget {{
-        margin: 0.10rem 0.46rem 0;
+        margin: 0.20rem 0.46rem 0.20rem;
         color: var(--pbm-primary-dark);
-        font-size: 0.82rem;
+        font-size: 0.92rem;
         line-height: 1.05;
         font-weight: 800;
         font-variant-numeric: tabular-nums;
