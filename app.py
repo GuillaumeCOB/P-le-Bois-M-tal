@@ -110,7 +110,7 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-text);
     }}
     .block-container {{
-        padding-top: 3rem;
+        padding-top: 2rem;
         padding-bottom: 1.25rem;
         padding-left: 1.25rem;
         padding-right: 1.25rem;
@@ -278,7 +278,7 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-primary-dark);
     }}
     {actionbar} {{
-        padding: 0.6rem 0.85rem 0.52rem;
+        padding: 0.2rem 0.85rem 0.52rem;
         margin-bottom: 0.42rem;
         background: rgba(255,255,255,0.84);
         border: 1px solid var(--pbm-border);
