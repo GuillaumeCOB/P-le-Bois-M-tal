@@ -241,10 +241,16 @@ def inject_brand_styles(data: dict):
     }}
     .pbm-grid-cell.right {{justify-content: flex-end; text-align: right;}}
     .pbm-grid-cell.center {{justify-content: center; text-align: center;}}
+    .pbm-grid-header-wrap {{
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        padding-bottom: 10px;
+    }}
     .pbm-grid-header {{
         min-height: 42px;
         padding: 0.34rem 0.36rem;
-        margin: 0.18rem 0 0.32rem;
+        margin: 0.18rem 0 0;
         background: rgba(59,56,245,0.065);
         border: 1px solid rgba(59,56,245,0.14);
         border-radius: 10px;
@@ -494,10 +500,11 @@ def render_group_header():
             f'<div class="pbm-grid-cell{extra}">{escape(label)}</div>'
         )
     st.markdown(
-        f'<div class="pbm-grid-row pbm-grid-header" '
+        '<div class="pbm-grid-header-wrap">'
+        + f'<div class="pbm-grid-row pbm-grid-header" '
         f'style="grid-template-columns:{grid_template(ROW_WIDTHS)}">'
         + "".join(classes)
-        + "</div>",
+        + "</div></div>",
         unsafe_allow_html=True,
     )
 
@@ -866,10 +873,6 @@ if active_page == "Tableau":
                         st.caption("Aucun projet dans ce groupe.")
                         continue
                     render_group_header()
-                    st.markdown(
-                        '<div style="height:14px;min-height:14px;line-height:14px;font-size:1px">&nbsp;</div>',
-                        unsafe_allow_html=True,
-                    )
                     for p in projects_in_group:
                         render_project_row(p)
                     render_group_total_row(projects_in_group)
