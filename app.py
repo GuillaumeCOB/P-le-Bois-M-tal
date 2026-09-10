@@ -120,7 +120,7 @@ def inject_brand_styles(data: dict):
     h1 {{font-size: 1.55rem !important; padding: 0 !important; margin: 0 !important;}}
     h3 {{font-size: 1rem !important;}}
     {nav} {{
-        margin: 0.45rem 0 0.75rem 0;
+        margin: 0.20rem 0 0.20rem 0;
         padding: 0 !important;
         gap: 0 !important;
     }}
