@@ -110,7 +110,7 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-text);
     }}
     .block-container {{
-        padding-top: 6rem;
+        padding-top: 3rem;
         padding-bottom: 1.25rem;
         padding-left: 1.25rem;
         padding-right: 1.25rem;
