@@ -281,6 +281,120 @@ def inject_brand_styles(data: dict):
         font-weight: 700;
         color: var(--pbm-primary-dark);
     }}
+    .pbm-header-project-gap {
+        display: block;
+        width: 100%;
+        height: 10px;
+        min-height: 10px;
+    }
+    :is(.element-container, [data-testid="stElementContainer"]):has(.pbm-header-project-gap) {
+        height: 10px !important;
+        min-height: 10px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Project rows: use Streamlit's container key class instead of :has() marker scopes.
+       This controls the actual row wrapper and avoids the oversized blank vertical space. */
+    [class*="st-key-pbm_project_"] {
+        margin: 0 0 5px 0 !important;
+        padding: 0 !important;
+    }
+    [class*="st-key-pbm_project_"] > div,
+    [class*="st-key-pbm_project_"] [data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+    [class*="st-key-pbm_row_"] {
+        box-sizing: border-box !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        max-height: 40px !important;
+        margin: 0 !important;
+        padding: 4px 0.34rem !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+    }
+    [class*="st-key-pbm_row_"] > div,
+    [class*="st-key-pbm_row_"] [data-testid="stVerticalBlock"] {
+        min-height: 32px !important;
+        height: 32px !important;
+        max-height: 32px !important;
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+    [class*="st-key-pbm_row_"] [data-testid="stHorizontalBlock"] {
+        min-height: 32px !important;
+        height: 32px !important;
+        max-height: 32px !important;
+        gap: 8px !important;
+        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    [class*="st-key-pbm_row_"] [data-testid="stHorizontalBlock"] > div {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        max-height: 32px !important;
+        margin: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        overflow: hidden !important;
+    }
+    [class*="st-key-pbm_row_"] :is(.element-container, [data-testid="stElementContainer"]) {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        max-height: 32px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }
+    [class*="st-key-pbm_row_"] .pbm-cell {
+        height: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    [class*="st-key-pbm_row_"] [data-testid="stMarkdownContainer"] {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        max-height: 32px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    [class*="st-key-pbm_row_"] [data-testid="stButton"] {
+        width: 100% !important;
+        min-height: 30px !important;
+        height: 30px !important;
+        max-height: 30px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    [class*="st-key-pbm_row_"] [data-testid="stButton"] button {
+        min-height: 30px !important;
+        height: 30px !important;
+        max-height: 30px !important;
+        margin: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+    [class*="st-key-pbm_row_"] .pbm-badge,
+    [class*="st-key-pbm_row_"] .pbm-project-number {
+        height: 25px !important;
+        min-height: 25px !important;
+        max-height: 25px !important;
+    }
     {actionbar} {{
         padding: 0.9rem 1rem 0.7rem;
         margin-bottom: 0.55rem;
@@ -458,15 +572,15 @@ def inject_brand_styles(data: dict):
     for p in data.get("projects", []):
         type_color = safe_color(data["type_colors"].get(p.get("type"), PRIMARY), PRIMARY)
         css += (
-            f'{css_scope(f"rowclr-{p["id"]}")} '
+            f'[class*="st-key-pbm_row_{p["id"]}"] '
             '{'
-            f'background:{hex_to_rgba(type_color, 0.14)};'
-            f'box-shadow: inset 0 0 0 1px {hex_to_rgba(type_color, 0.18)};'
-            f'border-left: 4px solid {type_color};'
+            f'background:{hex_to_rgba(type_color, 0.14)} !important;'
+            f'box-shadow: inset 0 0 0 1px {hex_to_rgba(type_color, 0.18)} !important;'
+            f'border-left: 4px solid {type_color} !important;'
             '}\n'
-            f'{css_scope(f"rowclr-{p["id"]}")}:hover '
+            f'[class*="st-key-pbm_row_{p["id"]}"]:hover '
             '{'
-            f'background:{hex_to_rgba(type_color, 0.2)};'
+            f'background:{hex_to_rgba(type_color, 0.2)} !important;'
             '}\n'
         )
 
@@ -795,8 +909,8 @@ def render_project_row(p: dict):
     if expand_key not in st.session_state:
         st.session_state[expand_key] = False
 
-    with ui_container(f"pbm_project_{pid}", "project"):
-        with ui_container(f"pbm_row_{pid}", ["row", f"rowclr-{pid}"]):
+    with st.container(key=f"pbm_project_{pid}", border=False):
+        with st.container(key=f"pbm_row_{pid}", border=False):
             cols = st.columns(ROW_WIDTHS, gap="small", vertical_alignment="center")
             arrow = "▾" if st.session_state[expand_key] else "▸"
             if cols[0].button(arrow, key=f"arrow_{pid}", help="Afficher / masquer les sous-tâches"):
@@ -892,6 +1006,7 @@ if active_page == "Tableau":
                         st.caption("Aucun projet dans ce groupe.")
                         continue
                     render_group_header()
+                    st.markdown('<div class="pbm-header-project-gap"></div>', unsafe_allow_html=True)
                     for p in projects_in_group:
                         render_project_row(p)
                     render_group_total_row(projects_in_group)
