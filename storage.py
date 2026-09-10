@@ -35,10 +35,24 @@ STATUS_COLORS = {
     "Terminé": "#00c875",
 }
 
+DEFAULT_TYPES = ["DIAGNOSTIC", "APS", "APD", "PRO", "DCE", "EXE"]
+
+# Couleurs pastel, assez claires pour rester lisibles avec du texte foncé dessus
+TYPE_COLORS = {
+    "DIAGNOSTIC": "#FBD9D3",
+    "APS": "#FCE8C9",
+    "APD": "#FBF3C4",
+    "PRO": "#D9F0D6",
+    "DCE": "#D6E6F5",
+    "EXE": "#E5DAF2",
+}
+
 DEFAULT_DATA = {
     "collaborators": [],
     "statuses": DEFAULT_STATUSES.copy(),
     "status_colors": STATUS_COLORS.copy(),
+    "types": DEFAULT_TYPES.copy(),
+    "type_colors": TYPE_COLORS.copy(),
     "projects": [],
     "_meta": {"last_modified": None},
 }
@@ -149,16 +163,68 @@ def remove_status(path: str, name: str, fallback_status: str):
     return _mutate(path, m)
 
 
+def _move_in_list(lst: list, item, delta: int):
+    if item not in lst:
+        return
+    idx = lst.index(item)
+    new_idx = idx + delta
+    if 0 <= new_idx < len(lst):
+        lst[idx], lst[new_idx] = lst[new_idx], lst[idx]
+
+
+def move_status(path: str, name: str, delta: int):
+    def m(data):
+        _move_in_list(data["statuses"], name, delta)
+
+    return _mutate(path, m)
+
+
+# ---------------------------------------------------------------------------
+# Types de projet (DIAGNOSTIC, APS, APD, PRO, DCE, EXE...)
+# ---------------------------------------------------------------------------
+
+def add_type(path: str, name: str, color: str = "#eeeeee"):
+    name = name.strip()
+
+    def m(data):
+        if name and name not in data["types"]:
+            data["types"].append(name)
+            data["type_colors"][name] = color
+
+    return _mutate(path, m)
+
+
+def remove_type(path: str, name: str):
+    def m(data):
+        if name in data["types"]:
+            data["types"].remove(name)
+        data["type_colors"].pop(name, None)
+        for p in data["projects"]:
+            if p.get("type") == name:
+                p["type"] = None
+
+    return _mutate(path, m)
+
+
+def move_type(path: str, name: str, delta: int):
+    def m(data):
+        _move_in_list(data["types"], name, delta)
+
+    return _mutate(path, m)
+
+
 # ---------------------------------------------------------------------------
 # Projets
 # ---------------------------------------------------------------------------
 
 def new_project_dict(name, status, assigned=None, estimated_time=0.0,
-                      start_date=None, due_date=None, budget=0.0, remarks=""):
+                      start_date=None, due_date=None, budget=0.0, remarks="",
+                      project_type=None):
     return {
         "id": uuid.uuid4().hex,
         "name": name,
         "status": status,
+        "type": project_type,
         "assigned": assigned or [],
         "estimated_time": estimated_time,
         "start_date": start_date,
@@ -236,6 +302,24 @@ def delete_subtask(path: str, project_id: str, subtask_id: str):
         for p in data["projects"]:
             if p["id"] == project_id:
                 p["subtasks"] = [s for s in p["subtasks"] if s["id"] != subtask_id]
+                p["updated_at"] = _now_iso()
+                break
+
+    return _mutate(path, m)
+
+
+def move_subtask(path: str, project_id: str, subtask_id: str, delta: int):
+    def m(data):
+        for p in data["projects"]:
+            if p["id"] == project_id:
+                ids = [s["id"] for s in p["subtasks"]]
+                if subtask_id in ids:
+                    idx = ids.index(subtask_id)
+                    new_idx = idx + delta
+                    if 0 <= new_idx < len(ids):
+                        p["subtasks"][idx], p["subtasks"][new_idx] = (
+                            p["subtasks"][new_idx], p["subtasks"][idx],
+                        )
                 p["updated_at"] = _now_iso()
                 break
 
