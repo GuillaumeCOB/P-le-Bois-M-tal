@@ -94,6 +94,7 @@ def inject_brand_styles(data: dict):
     actionbar = css_scope("actionbar")
     formcard = css_scope("formcard")
     nav = css_scope("nav")
+    summary = css_scope("summary")
 
     css = f"""
     :root {{
@@ -444,6 +445,63 @@ def inject_brand_styles(data: dict):
         padding: 1rem;
         box-shadow: 0 10px 30px rgba(64,51,140,0.04);
     }}
+    {summary} {{
+        gap: 0.34rem !important;
+        padding: 0.68rem 0.62rem 0.72rem;
+        background: rgba(255,255,255,0.86);
+        border: 1px solid var(--pbm-border);
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(64,51,140,0.045);
+    }}
+    {summary} .pbm-summary-title {{
+        color: var(--pbm-primary-dark);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.055em;
+        text-transform: uppercase;
+        margin: 0 0 0.28rem 0.08rem;
+    }}
+    {summary} [data-testid="stButton"] button {{
+        min-height: 2.05rem !important;
+        height: 2.05rem !important;
+        padding: 0 0.55rem !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(59,56,245,0.11) !important;
+        box-shadow: none !important;
+        font-weight: 700 !important;
+    }}
+    {summary} [data-testid="stButton"] button[kind="secondary"] {{
+        background: rgba(255,255,255,0.84) !important;
+        color: var(--pbm-text) !important;
+    }}
+    {summary} [data-testid="stButton"] button[kind="primary"] {{
+        background: rgba(59,56,245,0.12) !important;
+        color: var(--pbm-primary-dark) !important;
+        border-color: rgba(59,56,245,0.25) !important;
+    }}
+    {summary} [data-testid="stButton"] button p {{
+        font-size: 0.80rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }}
+    {summary} .pbm-side-budget {{
+        margin: 0.10rem 0.46rem 0;
+        color: var(--pbm-primary-dark);
+        font-size: 1.02rem;
+        line-height: 1.05;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }}
+    {summary} .pbm-side-meta {{
+        margin: 0.08rem 0.46rem 0.10rem;
+        color: var(--pbm-muted);
+        font-size: 0.72rem;
+        line-height: 1.15;
+        font-variant-numeric: tabular-nums;
+    }}
     @media (max-width: 760px) {{
         .block-container {{padding-left: 0.7rem; padding-right: 0.7rem;}}
     }}
@@ -452,6 +510,28 @@ def inject_brand_styles(data: dict):
     for i, status in enumerate(data["statuses"]):
         color = safe_color(data["status_colors"].get(status), PRIMARY)
         css += f'[data-testid="stExpander"]:has(.pbm-group-{i}) {{border-left: 4px solid {color};}}\n'
+        side_scope = css_scope(f"summary-{i}")
+        css += (
+            f'{side_scope} {{'
+            f'border-left: 4px solid {color};'
+            'padding: 0.25rem 0.28rem 0.28rem 0.38rem;'
+            'margin-bottom: 0.18rem;'
+            'background: rgba(248,248,253,0.78);'
+            'border-radius: 10px;'
+            'gap: 0 !important;'
+            '}\n'
+        )
+    all_scope = css_scope("summary-all")
+    css += (
+        f'{all_scope} {{'
+        f'border-left: 4px solid {PRIMARY};'
+        'padding: 0.25rem 0.28rem 0.28rem 0.38rem;'
+        'margin-bottom: 0.26rem;'
+        'background: rgba(59,56,245,0.045);'
+        'border-radius: 10px;'
+        'gap: 0 !important;'
+        '}\n'
+    )
 
     for p in data.get("projects", []):
         type_color = safe_color(data["type_colors"].get(p.get("type"), PRIMARY), PRIMARY)
@@ -725,6 +805,55 @@ with ui_container("pbm_main_navigation", "nav"):
 active_page = st.session_state["pbm_active_page"]
 
 
+def _set_summary_status(status):
+    st.session_state["pbm_summary_status"] = status
+
+
+if "pbm_summary_status" not in st.session_state:
+    st.session_state["pbm_summary_status"] = None
+
+
+def render_group_summary():
+    selected_status = st.session_state.get("pbm_summary_status")
+    with ui_container("pbm_group_summary", "summary"):
+        st.markdown('<div class="pbm-summary-title">Synthèse par groupe</div>', unsafe_allow_html=True)
+
+        all_projects = data.get("projects", [])
+        all_budget, all_hours = get_group_totals(all_projects)
+        with ui_container("pbm_summary_all", "summary-all"):
+            st.button(
+                "Tous les groupes",
+                key="summary_all_groups",
+                use_container_width=True,
+                type="primary" if selected_status is None else "secondary",
+                on_click=_set_summary_status,
+                args=(None,),
+            )
+            st.markdown(
+                f'<div class="pbm-side-budget">{display_amount(all_budget)}</div>'
+                f'<div class="pbm-side-meta">{len(all_projects)} projet{"s" if len(all_projects) != 1 else ""} · {display_hours(all_hours)}</div>',
+                unsafe_allow_html=True,
+            )
+
+        for i, status in enumerate(data["statuses"]):
+            group_projects = [p for p in all_projects if p.get("status") == status]
+            group_budget, group_hours = get_group_totals(group_projects)
+            with ui_container(f"pbm_summary_{i}", f"summary-{i}"):
+                st.button(
+                    status,
+                    key=f"summary_status_{i}",
+                    use_container_width=True,
+                    type="primary" if selected_status == status else "secondary",
+                    on_click=_set_summary_status,
+                    args=(status,),
+                )
+                st.markdown(
+                    f'<div class="pbm-side-budget">{display_amount(group_budget)}</div>'
+                    f'<div class="pbm-side-meta">{len(group_projects)} projet{"s" if len(group_projects) != 1 else ""} · {display_hours(group_hours)}</div>',
+                    unsafe_allow_html=True,
+                )
+
+
 def render_subtasks(p: dict):
     pid = p["id"]
     subtasks = p.get("subtasks", [])
@@ -838,62 +967,73 @@ def render_group_total_row(projects_in_group: list[dict]):
 
 
 if active_page == "Tableau":
-    with ui_container("pbm_board", "board"):
-        filters = st.columns([1.5, 1.0, 1.0, 1.0], gap="small")
-        query = filters[0].text_input(
-            "Rechercher un projet", placeholder="Rechercher nom, numéro, remarques...",
-            label_visibility="collapsed", key="pbm_search",
-        ).strip().casefold()
-        person_filter = filters[1].selectbox(
-            "Collaborateur", [None] + data["collaborators"],
-            format_func=lambda x: "Tous les collaborateurs" if x is None else x,
-            label_visibility="collapsed", key="pbm_person",
-        )
-        status_filter = filters[2].selectbox(
-            "Statut", [None] + data["statuses"],
-            format_func=lambda x: "Tous les statuts" if x is None else x,
-            label_visibility="collapsed", key="pbm_status",
-        )
-        type_filter = filters[3].selectbox(
-            "Type", [None] + data["types"],
-            format_func=lambda x: "Tous les types" if x is None else x,
-            label_visibility="collapsed", key="pbm_type",
-        )
+    left_col, main_col = st.columns([1.25, 6.75], gap="medium")
 
-        projects = [
-            p for p in data["projects"]
-            if (not query or query in project_search_blob(p))
-            and (person_filter is None or person_filter in p.get("assigned", []))
-            and (status_filter is None or p.get("status") == status_filter)
-            and (type_filter is None or p.get("type") == type_filter)
-        ]
-        active_filters = bool(query or person_filter is not None or status_filter is not None or type_filter is not None)
+    with left_col:
+        render_group_summary()
 
-        if not data["projects"]:
-            st.info("Aucun projet. Utilisez l'onglet Nouveau projet pour en créer un.")
-        elif not projects:
-            st.info("Aucun projet ne correspond aux filtres.")
-
-        for group_index, status in enumerate(data["statuses"]):
-            projects_in_group = [p for p in projects if p["status"] == status]
-            if active_filters and not projects_in_group:
-                continue
-            count = len(projects_in_group)
-            total_budget, total_hours = get_group_totals(projects_in_group)
-            title = (
-                f"{status} · {count} projet{'s' if count != 1 else ''}"
-                f" · {display_amount(total_budget)} · {display_hours(total_hours)}"
+    with main_col:
+        with ui_container("pbm_board", "board"):
+            filters = st.columns([1.7, 1.0, 1.0], gap="small")
+            query = filters[0].text_input(
+                "Rechercher un projet", placeholder="Rechercher nom, numéro, remarques...",
+                label_visibility="collapsed", key="pbm_search",
+            ).strip().casefold()
+            person_filter = filters[1].selectbox(
+                "Collaborateur", [None] + data["collaborators"],
+                format_func=lambda x: "Tous les collaborateurs" if x is None else x,
+                label_visibility="collapsed", key="pbm_person",
             )
-            with st.expander(title, expanded=bool(projects_in_group)):
-                with ui_container(f"pbm_group_{group_index}", "group"):
-                    st.markdown(f'<span class="pbm-marker pbm-group-{group_index}"></span>', unsafe_allow_html=True)
-                    if not projects_in_group:
-                        st.caption("Aucun projet dans ce groupe.")
-                        continue
-                    render_group_header()
-                    for p in projects_in_group:
-                        render_project_row(p)
-                    render_group_total_row(projects_in_group)
+            type_filter = filters[2].selectbox(
+                "Type", [None] + data["types"],
+                format_func=lambda x: "Tous les types" if x is None else x,
+                label_visibility="collapsed", key="pbm_type",
+            )
+
+            summary_status = st.session_state.get("pbm_summary_status")
+            projects = [
+                p for p in data["projects"]
+                if (not query or query in project_search_blob(p))
+                and (person_filter is None or person_filter in p.get("assigned", []))
+                and (summary_status is None or p.get("status") == summary_status)
+                and (type_filter is None or p.get("type") == type_filter)
+            ]
+            active_filters = bool(
+                query
+                or person_filter is not None
+                or summary_status is not None
+                or type_filter is not None
+            )
+
+            if not data["projects"]:
+                st.info("Aucun projet. Utilisez l'onglet Nouveau projet pour en créer un.")
+            elif not projects:
+                st.info("Aucun projet ne correspond aux filtres.")
+
+            for group_index, status in enumerate(data["statuses"]):
+                if summary_status is not None and status != summary_status:
+                    continue
+
+                projects_in_group = [p for p in projects if p["status"] == status]
+                if active_filters and not projects_in_group:
+                    continue
+
+                count = len(projects_in_group)
+                total_budget, total_hours = get_group_totals(projects_in_group)
+                title = (
+                    f"{status} · {count} projet{'s' if count != 1 else ''}"
+                    f" · {display_amount(total_budget)} · {display_hours(total_hours)}"
+                )
+                with st.expander(title, expanded=bool(projects_in_group)):
+                    with ui_container(f"pbm_group_{group_index}", "group"):
+                        st.markdown(f'<span class="pbm-marker pbm-group-{group_index}"></span>', unsafe_allow_html=True)
+                        if not projects_in_group:
+                            st.caption("Aucun projet dans ce groupe.")
+                            continue
+                        render_group_header()
+                        for p in projects_in_group:
+                            render_project_row(p)
+                        render_group_total_row(projects_in_group)
 
 if active_page == "Nouveau projet":
     with ui_container("pbm_form_add", "formcard"):
