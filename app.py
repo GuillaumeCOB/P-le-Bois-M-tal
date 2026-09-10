@@ -165,7 +165,9 @@ def inject_brand_styles(data: dict):
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        height: 27px;
         min-height: 27px;
+        max-height: 27px;
         box-sizing: border-box;
         max-width: 100%;
         padding: 0.22rem 0.52rem;
@@ -182,15 +184,17 @@ def inject_brand_styles(data: dict):
         display: flex;
         align-items: center;
         width: 100%;
+        height: 34px;
         min-height: 34px;
+        max-height: 34px;
         box-sizing: border-box;
         font-size: 0.84rem;
-        line-height: 1.3;
+        line-height: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         color: var(--pbm-text);
-        padding: 0.22rem 0.28rem;
+        padding: 0 0.28rem;
     }}
     .pbm-cell.number {{justify-content:flex-end; text-align:right; font-variant-numeric: tabular-nums; font-weight: 600;}}
     .pbm-cell.progress {{justify-content:center; text-align:center; opacity: 0.78; font-variant-numeric: tabular-nums;}}
@@ -200,7 +204,9 @@ def inject_brand_styles(data: dict):
     .pbm-project-number {{
         display:inline-flex;
         align-items:center;
+        height: 27px;
         min-height: 27px;
+        max-height: 27px;
         box-sizing: border-box;
         justify-content:center;
         min-width: 2.3rem;
@@ -244,10 +250,14 @@ def inject_brand_styles(data: dict):
     .pbm-grid-header {{
         min-height: 42px;
         padding: 0.34rem 0.36rem;
-        margin: 0.18rem 0 0.32rem;
+        margin: 0.18rem 0 0 !important;
         background: rgba(59,56,245,0.065);
         border: 1px solid rgba(59,56,245,0.14);
         border-radius: 10px;
+    }}
+    :is(.element-container, [data-testid="stElementContainer"]):has(.pbm-grid-header) {{
+        padding-bottom: 12px !important;
+        margin-bottom: 0 !important;
     }}
     .pbm-grid-header .pbm-grid-cell {{
         min-height: 30px;
@@ -306,16 +316,32 @@ def inject_brand_styles(data: dict):
     }}
     {project} {{margin-bottom: 0.28rem;}}
     {row} {{
-        padding: 0.38rem 0.34rem;
-        min-height: 50px;
+        padding: 5px 0.34rem !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        box-sizing: border-box;
         border-bottom: 1px solid rgba(64,51,140,0.06);
         border-radius: 12px;
         transition: background 0.15s ease;
+        overflow: hidden;
     }}
     {row}:hover {{background: rgba(64,51,140,0.06);}}
-    {row} [data-testid="stHorizontalBlock"],
+    {row} [data-testid="stHorizontalBlock"] {{
+        gap: 8px !important;
+        align-items: center !important;
+        min-height: 34px !important;
+        height: 34px !important;
+    }}
     {subrow} [data-testid="stHorizontalBlock"] {{gap: 8px !important; align-items: center !important;}}
-    {row} [data-testid="stHorizontalBlock"] > div,
+    {row} [data-testid="stHorizontalBlock"] > div {{
+        display: flex !important;
+        align-items: center !important;
+        justify-content: stretch !important;
+        min-height: 34px !important;
+        height: 34px !important;
+        max-height: 34px !important;
+        overflow: hidden !important;
+    }}
     {subrow} [data-testid="stHorizontalBlock"] > div {{
         display: flex !important;
         align-items: center !important;
@@ -325,6 +351,25 @@ def inject_brand_styles(data: dict):
     {subrow} [data-testid="stHorizontalBlock"] > div > div {{
         width: 100% !important;
     }}
+    {row} :is(.element-container, [data-testid="stElementContainer"]) {{
+        display: flex !important;
+        align-items: center !important;
+        min-height: 34px !important;
+        height: 34px !important;
+        max-height: 34px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+    }}
+    {row} [data-testid="stMarkdownContainer"] {{
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        min-height: 34px !important;
+        height: 34px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
     {row} [data-testid="stVerticalBlock"],
     {subrow} [data-testid="stVerticalBlock"] {{gap: 0 !important; min-width: 0;}}
     {row} :is([data-testid="stColumn"], [data-testid="column"]),
@@ -333,11 +378,12 @@ def inject_brand_styles(data: dict):
     {subrow} [data-testid="stMarkdownContainer"] p {{margin: 0;}}
     {row} [data-testid="stButton"] button,
     {subrow} [data-testid="stButton"] button {{
-        min-height: 34px;
-        height: 34px;
-        display: flex;
-        align-items: center;
-        padding: 0.14rem 0.35rem;
+        min-height: 34px !important;
+        height: 34px !important;
+        max-height: 34px !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 0.35rem !important;
         border: 1px solid transparent;
         border-radius: 8px;
         background: transparent;
@@ -846,10 +892,6 @@ if active_page == "Tableau":
                         st.caption("Aucun projet dans ce groupe.")
                         continue
                     render_group_header()
-                    st.markdown(
-                        '<div style="height:10px;line-height:10px"></div>',
-                        unsafe_allow_html=True,
-                    )
                     for p in projects_in_group:
                         render_project_row(p)
                     render_group_total_row(projects_in_group)
