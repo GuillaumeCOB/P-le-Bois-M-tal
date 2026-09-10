@@ -1,7 +1,7 @@
 
 """
 Outil interne de gestion de projets — Pôle BOIS/METAL
-Version interface compacte + charte graphique Builders / verticalsea.
+Version interface v6 : onglets arrondis, alignements renforcés, entêtes/totaux stabilisés.
 
 Lancement local : streamlit run app.py
 """
@@ -118,17 +118,39 @@ def inject_brand_styles(data: dict):
     h1, h2, h3 {{color: var(--pbm-primary-dark); letter-spacing: -0.02em;}}
     h1 {{font-size: 1.55rem !important; padding: 0 !important; margin: 0 !important;}}
     h3 {{font-size: 1rem !important;}}
-    [data-testid="stTabs"] [data-baseweb="tab-list"] {{gap: 0.35rem;}}
-    [data-testid="stTabs"] [data-baseweb="tab"] {{
-        height: 2.35rem;
-        background: rgba(59, 56, 245, 0.06);
-        border-radius: 999px;
-        padding: 0 0.9rem;
+    [data-testid="stTabs"] [role="tablist"] {{
+        gap: 0.45rem !important;
+        padding: 0.3rem !important;
+        background: rgba(59, 56, 245, 0.045) !important;
+        border: 1px solid rgba(59, 56, 245, 0.10) !important;
+        border-radius: 14px !important;
+        width: fit-content !important;
     }}
-    [data-testid="stTabs"] [aria-selected="true"] {{
-        background: rgba(59, 56, 245, 0.14) !important;
+    [data-testid="stTabs"] button[role="tab"] {{
+        min-height: 2.35rem !important;
+        height: 2.35rem !important;
+        padding: 0 0.95rem !important;
+        margin: 0 !important;
+        background: rgba(255, 255, 255, 0.92) !important;
+        border: 1px solid rgba(59, 56, 245, 0.10) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 2px rgba(64, 51, 140, 0.04) !important;
+        color: var(--pbm-text) !important;
+    }}
+    [data-testid="stTabs"] button[role="tab"] p {{
+        margin: 0 !important;
+        font-size: 0.88rem !important;
+        font-weight: 600 !important;
+    }}
+    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
+        background: rgba(59, 56, 245, 0.16) !important;
+        border-color: rgba(59, 56, 245, 0.28) !important;
         color: var(--pbm-primary-dark) !important;
-        font-weight: 700;
+        box-shadow: inset 0 0 0 1px rgba(59, 56, 245, 0.04) !important;
+    }}
+    [data-testid="stTabs"] [data-baseweb="tab-highlight"],
+    [data-testid="stTabs"] [data-baseweb="tab-border"] {{
+        display: none !important;
     }}
     :is(.element-container, [data-testid="stElementContainer"]):has(.pbm-marker) {{
         display: none !important;
@@ -143,6 +165,9 @@ def inject_brand_styles(data: dict):
     .pbm-badge {{
         display: inline-flex;
         align-items: center;
+        justify-content: center;
+        min-height: 27px;
+        box-sizing: border-box;
         max-width: 100%;
         padding: 0.22rem 0.52rem;
         border-radius: 999px;
@@ -155,20 +180,29 @@ def inject_brand_styles(data: dict):
         border: 1px solid rgba(0,0,0,0.04);
     }}
     .pbm-cell {{
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: 34px;
+        box-sizing: border-box;
         font-size: 0.84rem;
-        line-height: 1.42;
+        line-height: 1.3;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         color: var(--pbm-text);
-        padding: 0.14rem 0.18rem;
+        padding: 0.22rem 0.28rem;
     }}
-    .pbm-cell.number {{text-align:right; font-variant-numeric: tabular-nums; font-weight: 600;}}
-    .pbm-cell.progress {{text-align:center; opacity: 0.78; font-variant-numeric: tabular-nums;}}
+    .pbm-cell.number {{justify-content:flex-end; text-align:right; font-variant-numeric: tabular-nums; font-weight: 600;}}
+    .pbm-cell.progress {{justify-content:center; text-align:center; opacity: 0.78; font-variant-numeric: tabular-nums;}}
+    .pbm-cell.badge-cell {{justify-content:flex-start;}}
+    .pbm-cell.center-cell {{justify-content:center;}}
     .pbm-cell.done {{text-decoration: line-through; opacity: 0.6;}}
     .pbm-project-number {{
         display:inline-flex;
         align-items:center;
+        min-height: 27px;
+        box-sizing: border-box;
         justify-content:center;
         min-width: 2.3rem;
         padding: 0.18rem 0.45rem;
@@ -187,6 +221,57 @@ def inject_brand_styles(data: dict):
     }}
     .pbm-summary-card strong {{color: var(--pbm-primary-dark);}}
     .pbm-summary-label {{font-size:0.76rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--pbm-muted);}}
+    .pbm-grid-row {{
+        display: grid;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        align-items: center;
+    }}
+    .pbm-grid-cell {{
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        min-height: 32px;
+        padding: 0.28rem 0.32rem;
+        box-sizing: border-box;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: var(--pbm-text);
+    }}
+    .pbm-grid-cell.right {{justify-content: flex-end; text-align: right;}}
+    .pbm-grid-cell.center {{justify-content: center; text-align: center;}}
+    .pbm-grid-header {{
+        min-height: 42px;
+        padding: 0.34rem 0.36rem;
+        margin: 0.18rem 0 0.32rem;
+        background: rgba(59,56,245,0.065);
+        border: 1px solid rgba(59,56,245,0.14);
+        border-radius: 10px;
+    }}
+    .pbm-grid-header .pbm-grid-cell {{
+        min-height: 30px;
+        font-size: 0.73rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--pbm-muted);
+    }}
+    .pbm-grid-total {{
+        min-height: 42px;
+        padding: 0.34rem 0.36rem;
+        margin: 0.38rem 0 0.12rem;
+        background: rgba(59,56,245,0.07);
+        border: 1px solid rgba(59,56,245,0.16);
+        border-radius: 10px;
+    }}
+    .pbm-grid-total .pbm-grid-cell {{
+        min-height: 30px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--pbm-primary-dark);
+    }}
     {actionbar} {{
         padding: 0.9rem 1rem 0.7rem;
         margin-bottom: 0.55rem;
@@ -222,31 +307,37 @@ def inject_brand_styles(data: dict):
     }}
     {project} {{margin-bottom: 0.28rem;}}
     {row} {{
-        padding: 0.36rem 0.3rem;
-        min-height: 46px;
+        padding: 0.38rem 0.34rem;
+        min-height: 50px;
         border-bottom: 1px solid rgba(64,51,140,0.06);
         border-radius: 12px;
         transition: background 0.15s ease;
     }}
     {row}:hover {{background: rgba(64,51,140,0.06);}}
     {row} [data-testid="stHorizontalBlock"],
-    {header} [data-testid="stHorizontalBlock"],
-    {subrow} [data-testid="stHorizontalBlock"],
-    {total} [data-testid="stHorizontalBlock"] {{gap: 8px !important; align-items: center;}}
+    {subrow} [data-testid="stHorizontalBlock"] {{gap: 8px !important; align-items: center !important;}}
+    {row} [data-testid="stHorizontalBlock"] > div,
+    {subrow} [data-testid="stHorizontalBlock"] > div {{
+        display: flex !important;
+        align-items: center !important;
+        min-height: 36px !important;
+    }}
+    {row} [data-testid="stHorizontalBlock"] > div > div,
+    {subrow} [data-testid="stHorizontalBlock"] > div > div {{
+        width: 100% !important;
+    }}
     {row} [data-testid="stVerticalBlock"],
-    {subrow} [data-testid="stVerticalBlock"],
-    {total} [data-testid="stVerticalBlock"] {{gap: 0 !important; min-width: 0;}}
+    {subrow} [data-testid="stVerticalBlock"] {{gap: 0 !important; min-width: 0;}}
     {row} :is([data-testid="stColumn"], [data-testid="column"]),
-    {header} :is([data-testid="stColumn"], [data-testid="column"]),
-    {subrow} :is([data-testid="stColumn"], [data-testid="column"]),
-    {total} :is([data-testid="stColumn"], [data-testid="column"]) {{min-width: 0;}}
+    {subrow} :is([data-testid="stColumn"], [data-testid="column"]) {{min-width: 0;}}
     {row} [data-testid="stMarkdownContainer"] p,
-    {subrow} [data-testid="stMarkdownContainer"] p,
-    {total} [data-testid="stMarkdownContainer"] p {{margin: 0;}}
+    {subrow} [data-testid="stMarkdownContainer"] p {{margin: 0;}}
     {row} [data-testid="stButton"] button,
     {subrow} [data-testid="stButton"] button {{
-        min-height: 32px;
-        height: 32px;
+        min-height: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
         padding: 0.14rem 0.35rem;
         border: 1px solid transparent;
         border-radius: 8px;
@@ -354,6 +445,68 @@ def cell(text, style: str = "", tooltip: str = ""):
     title = escape(tooltip or value, quote=True)
     st.markdown(
         f'<div class="pbm-cell {style}" title="{title}">{escape(value)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def badge_cell(text: str, color: str, text_color: str = "white"):
+    st.markdown(
+        f'<div class="pbm-cell badge-cell">{badge(text, color, text_color)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def project_number_cell(project: dict):
+    st.markdown(
+        f'<div class="pbm-cell center-cell">{project_number_markup(project)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def grid_template(widths) -> str:
+    return " ".join(f"{float(w):g}fr" for w in widths)
+
+
+def render_group_header():
+    classes = []
+    for idx, label in enumerate(ROW_LABELS):
+        extra = " right" if idx in (7, 8) else " center" if idx in (0, 1, 9) else ""
+        classes.append(
+            f'<div class="pbm-grid-cell{extra}">{escape(label)}</div>'
+        )
+    st.markdown(
+        f'<div class="pbm-grid-row pbm-grid-header" '
+        f'style="grid-template-columns:{grid_template(ROW_WIDTHS)}">'
+        + "".join(classes)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_group_total_html(projects_in_group: list[dict]):
+    total_budget, total_hours = get_group_totals(projects_in_group)
+    count = len(projects_in_group)
+    values = [
+        "",
+        "",
+        "TOTAL DU GROUPE",
+        "",
+        "",
+        "",
+        f"{count} projet{'s' if count > 1 else ''}",
+        display_amount(total_budget),
+        display_hours(total_hours),
+        "",
+    ]
+    cells = []
+    for idx, value in enumerate(values):
+        extra = " right" if idx in (7, 8) else " center" if idx in (0, 1, 9) else ""
+        cells.append(f'<div class="pbm-grid-cell{extra}">{escape(value)}</div>')
+    st.markdown(
+        f'<div class="pbm-grid-row pbm-grid-total" '
+        f'style="grid-template-columns:{grid_template(TOTAL_WIDTHS)}">'
+        + "".join(cells)
+        + "</div>",
         unsafe_allow_html=True,
     )
 
@@ -586,19 +739,19 @@ def render_project_row(p: dict):
                 st.session_state[expand_key] = not st.session_state[expand_key]
                 st.rerun()
             with cols[1]:
-                st.markdown(project_number_markup(p), unsafe_allow_html=True)
+                project_number_cell(p)
             if cols[2].button(p["name"], key=f"name_{pid}", use_container_width=True, help=p["name"]):
                 edit_project_dialog(p)
             with cols[3]:
                 ptype = p.get("type")
                 if ptype:
-                    st.markdown(badge(ptype, data["type_colors"].get(ptype, PRIMARY_DARK), PRIMARY_DARK), unsafe_allow_html=True)
+                    badge_cell(ptype, data["type_colors"].get(ptype, PRIMARY_DARK), PRIMARY_DARK)
                 else:
                     cell("—")
             with cols[4]:
                 cell(", ".join(p.get("assigned", [])) or "—")
             with cols[5]:
-                st.markdown(badge(p["status"], data["status_colors"].get(p["status"], PRIMARY), "white"), unsafe_allow_html=True)
+                badge_cell(p["status"], data["status_colors"].get(p["status"], PRIMARY), "white")
             with cols[6]:
                 cell(display_date(p.get("due_date")))
             with cols[7]:
@@ -618,17 +771,7 @@ def render_project_row(p: dict):
 
 
 def render_group_total_row(projects_in_group: list[dict]):
-    total_budget, total_hours = get_group_totals(projects_in_group)
-    with ui_container(f"pbm_total_{hash(tuple(p['id'] for p in projects_in_group))}", "total"):
-        cols = st.columns(TOTAL_WIDTHS, gap="small", vertical_alignment="center")
-        with cols[2]:
-            cell("TOTAL DU GROUPE")
-        with cols[6]:
-            cell(f"{len(projects_in_group)} projet{'s' if len(projects_in_group) > 1 else ''}")
-        with cols[7]:
-            cell(display_amount(total_budget), "number")
-        with cols[8]:
-            cell(display_hours(total_hours), "number")
+    render_group_total_html(projects_in_group)
 
 
 with tab_board:
@@ -684,11 +827,7 @@ with tab_board:
                     if not projects_in_group:
                         st.caption("Aucun projet dans ce groupe.")
                         continue
-                    with ui_container(f"pbm_header_{group_index}", "header"):
-                        header_cols = st.columns(ROW_WIDTHS, gap="small", vertical_alignment="center")
-                        for idx, (c, label) in enumerate(zip(header_cols, ROW_LABELS)):
-                            with c:
-                                cell(label, "number" if idx in (7, 8) else "progress" if idx == 9 else "")
+                    render_group_header()
                     for p in projects_in_group:
                         render_project_row(p)
                     render_group_total_row(projects_in_group)
