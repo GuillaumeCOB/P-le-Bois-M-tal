@@ -266,7 +266,7 @@ def inject_brand_styles(data: dict):
     .pbm-grid-total {{
         min-height: 42px;
         padding: 0.34rem 0.36rem;
-        margin: 0.30rem 0 0.42rem;
+        margin: 0.26rem 0 0.60rem;
         background: rgba(59,56,245,0.07);
         border: 1px solid rgba(59,56,245,0.16);
         border-radius: 10px;
