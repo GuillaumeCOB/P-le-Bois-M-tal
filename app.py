@@ -278,7 +278,7 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-primary-dark);
     }}
     {actionbar} {{
-        padding: 0.85rem 0.85rem 0.52rem;
+        padding: 1.2rem 0.85rem 0.52rem;
         margin-bottom: 0.42rem;
         background: rgba(255,255,255,0.84);
         border: 1px solid var(--pbm-border);
