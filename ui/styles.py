@@ -280,7 +280,7 @@ def inject_brand_styles(data: dict):
 
     {projectrow}, {subprojectrow}, {taskrow} {{
         padding: 2px 0.34rem;
-        min-height: 38px;
+        min-height: 20px;
         border-bottom: 1px solid rgba(64,51,140,0.06);
         border-radius: 11px;
         transition: background 0.15s ease;
