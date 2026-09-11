@@ -62,7 +62,7 @@ def _calendar_styles():
             position: relative;
             box-sizing: border-box;
             min-width: 0;
-            min-height: 100px;
+            min-height: 128px;
             padding: 0.42rem 0.42rem 0.5rem;
             border-right: 1px solid {BORDER};
             border-bottom: 1px solid {BORDER};
@@ -158,21 +158,16 @@ def _parse_date(value):
         return None
 
 
-def _project_period(project: dict):
-    """Return the visible project period as (start_date, due_date).
+def _project_workdays(project: dict):
+    """Return the workdays used to display a project in the calendar.
 
-    If a start date exists, it is used directly. Otherwise, the start date is
-    estimated from the project's estimated hours, using 8 hours = 1 day. The
-    due date counts as the last day of the estimated duration.
+    The project's start_date is deliberately ignored. The visible duration is
+    calculated only from the due date and estimated hours, using 8 h = 1 workday.
+    Saturdays and Sundays are skipped.
     """
     due = _parse_date(project.get("due_date"))
     if due is None:
-        return None, None
-
-    explicit_start = _parse_date(project.get("start_date"))
-    if explicit_start is not None:
-        start = min(explicit_start, due)
-        return start, due
+        return [], None
 
     try:
         estimated_hours = float(project.get("estimated_time", 0) or 0)
@@ -180,8 +175,16 @@ def _project_period(project: dict):
         estimated_hours = 0
 
     duration_days = max(1, math.ceil(estimated_hours / HOURS_PER_DAY))
-    start = due - timedelta(days=duration_days - 1)
-    return start, due
+
+    workdays = []
+    current_date = due
+    while len(workdays) < duration_days:
+        if current_date.weekday() < 5:  # Monday = 0, Sunday = 6
+            workdays.append(current_date)
+        current_date -= timedelta(days=1)
+
+    workdays.reverse()
+    return workdays, due
 
 
 def _project_card(project: dict, data: dict, current_date: date, due_date: date) -> str:
@@ -195,10 +198,11 @@ def _project_card(project: dict, data: dict, current_date: date, due_date: date)
     except (TypeError, ValueError):
         estimated_hours = 0
 
-    start_date, _ = _project_period(project)
+    workdays, _ = _project_workdays(project)
     period_text = ""
-    if start_date and due_date:
-        period_text = f" · {start_date.strftime('%d/%m/%Y')} → {due_date.strftime('%d/%m/%Y')}"
+    if workdays and due_date:
+        visible_start = workdays[0]
+        period_text = f" · {visible_start.strftime('%d/%m/%Y')} → {due_date.strftime('%d/%m/%Y')}"
     hours_text = f" · {estimated_hours:g} h" if estimated_hours else ""
     tooltip = escape(
         f"{project.get('project_number') or '—'} · {project.get('name') or ''}{hours_text}{period_text}",
@@ -220,14 +224,12 @@ def _projects_by_day(data: dict):
     by_day = {}
 
     for project in data.get("projects", []):
-        start_date, due_date = _project_period(project)
-        if start_date is None or due_date is None:
+        workdays, due_date = _project_workdays(project)
+        if not workdays or due_date is None:
             continue
 
-        current_date = start_date
-        while current_date <= due_date:
+        for current_date in workdays:
             by_day.setdefault(current_date, []).append((project, due_date))
-            current_date += timedelta(days=1)
 
     return by_day
 
@@ -280,9 +282,9 @@ def _render_calendar_grid(data: dict):
 def render_calendrier(data: dict):
     _calendar_styles()
 
-    st.subheader("Vue calendrier (durée estimée des projets)")
+    st.subheader("Vue calendrier (charge estimée des projets)")
     st.caption(
-        "La date de début est utilisée lorsqu'elle existe. Sinon, la durée est estimée à partir des heures du projet (8 h = 1 jour), jusqu'à la date d'échéance."
+        "La date de début n'est pas utilisée. La durée est calculée uniquement à partir de l'échéance et des heures estimées (8 h = 1 jour ouvré), sans samedi ni dimanche."
     )
 
     if "cal_month" not in st.session_state:
