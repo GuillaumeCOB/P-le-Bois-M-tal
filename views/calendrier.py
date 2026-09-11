@@ -283,9 +283,6 @@ def render_calendrier(data: dict):
     _calendar_styles()
 
     st.subheader("Vue calendrier (charge estimée des projets)")
-    st.caption(
-        "La date de début n'est pas utilisée. La durée est calculée uniquement à partir de l'échéance et des heures estimées (8 h = 1 jour ouvré), sans samedi ni dimanche."
-    )
 
     if "cal_month" not in st.session_state:
         today = date.today()
