@@ -1,5 +1,6 @@
 import calendar as cal
-from datetime import date
+import math
+from datetime import date, timedelta
 from html import escape
 
 import streamlit as st
@@ -9,6 +10,7 @@ from ui.components import hex_to_rgba, safe_color
 
 
 WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+HOURS_PER_DAY = 8
 
 
 def _change_calendar_month(delta: int):
@@ -116,6 +118,10 @@ def _calendar_styles():
             overflow: hidden;
         }}
 
+        .pbm-calendar-event.due {{
+            box-shadow: inset -2px 0 0 {PRIMARY_DARK};
+        }}
+
         .pbm-calendar-event strong {{
             color: {PRIMARY_DARK};
             font-weight: 800;
@@ -143,18 +149,66 @@ def _calendar_styles():
     )
 
 
-def _project_card(project: dict, data: dict) -> str:
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _project_period(project: dict):
+    """Return the visible project period as (start_date, due_date).
+
+    If a start date exists, it is used directly. Otherwise, the start date is
+    estimated from the project's estimated hours, using 8 hours = 1 day. The
+    due date counts as the last day of the estimated duration.
+    """
+    due = _parse_date(project.get("due_date"))
+    if due is None:
+        return None, None
+
+    explicit_start = _parse_date(project.get("start_date"))
+    if explicit_start is not None:
+        start = min(explicit_start, due)
+        return start, due
+
+    try:
+        estimated_hours = float(project.get("estimated_time", 0) or 0)
+    except (TypeError, ValueError):
+        estimated_hours = 0
+
+    duration_days = max(1, math.ceil(estimated_hours / HOURS_PER_DAY))
+    start = due - timedelta(days=duration_days - 1)
+    return start, due
+
+
+def _project_card(project: dict, data: dict, current_date: date, due_date: date) -> str:
     project_type = project.get("type")
     color = safe_color(data["type_colors"].get(project_type, PRIMARY), PRIMARY)
     number = escape(str(project.get("project_number") or "—"), quote=True)
     name = escape(str(project.get("name") or ""), quote=True)
+
+    try:
+        estimated_hours = float(project.get("estimated_time", 0) or 0)
+    except (TypeError, ValueError):
+        estimated_hours = 0
+
+    start_date, _ = _project_period(project)
+    period_text = ""
+    if start_date and due_date:
+        period_text = f" · {start_date.strftime('%d/%m/%Y')} → {due_date.strftime('%d/%m/%Y')}"
+    hours_text = f" · {estimated_hours:g} h" if estimated_hours else ""
     tooltip = escape(
-        f"{project.get('project_number') or '—'} · {project.get('name') or ''}",
+        f"{project.get('project_number') or '—'} · {project.get('name') or ''}{hours_text}{period_text}",
         quote=True,
     )
 
+    due_class = " due" if current_date == due_date else ""
+
     return (
-        f'<div class="pbm-calendar-event" title="{tooltip}" '
+        f'<div class="pbm-calendar-event{due_class}" title="{tooltip}" '
         f'style="background:{hex_to_rgba(color, 0.14)}; '
         f'border-left:4px solid {color};">'
         f'<div class="pbm-calendar-event-name"><strong>{number}</strong> · {name}</div>'
@@ -162,16 +216,27 @@ def _project_card(project: dict, data: dict) -> str:
     )
 
 
+def _projects_by_day(data: dict):
+    by_day = {}
+
+    for project in data.get("projects", []):
+        start_date, due_date = _project_period(project)
+        if start_date is None or due_date is None:
+            continue
+
+        current_date = start_date
+        while current_date <= due_date:
+            by_day.setdefault(current_date, []).append((project, due_date))
+            current_date += timedelta(days=1)
+
+    return by_day
+
+
 def _render_calendar_grid(data: dict):
     year = st.session_state.cal_year
     month = st.session_state.cal_month
     today = date.today()
-
-    by_day = {}
-    for project in data.get("projects", []):
-        due_date = project.get("due_date")
-        if due_date:
-            by_day.setdefault(due_date, []).append(project)
+    by_day = _projects_by_day(data)
 
     month_matrix = cal.monthcalendar(year, month)
 
@@ -198,14 +263,13 @@ def _render_calendar_grid(data: dict):
             if current_date == today:
                 classes.append("today")
 
-            day_str = current_date.isoformat()
             html.append(f'<div class="{" ".join(classes)}">')
             html.append(
                 f'<div class="pbm-calendar-number"><span>{day}</span></div>'
             )
 
-            for project in by_day.get(day_str, []):
-                html.append(_project_card(project, data))
+            for project, due_date in by_day.get(current_date, []):
+                html.append(_project_card(project, data, current_date, due_date))
 
             html.append("</div>")
 
@@ -216,7 +280,10 @@ def _render_calendar_grid(data: dict):
 def render_calendrier(data: dict):
     _calendar_styles()
 
-    st.subheader("Vue calendrier (par date d'échéance)")
+    st.subheader("Vue calendrier (durée estimée des projets)")
+    st.caption(
+        "La date de début est utilisée lorsqu'elle existe. Sinon, la durée est estimée à partir des heures du projet (8 h = 1 jour), jusqu'à la date d'échéance."
+    )
 
     if "cal_month" not in st.session_state:
         today = date.today()
