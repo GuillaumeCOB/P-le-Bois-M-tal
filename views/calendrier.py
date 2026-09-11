@@ -62,7 +62,7 @@ def _calendar_styles():
             position: relative;
             box-sizing: border-box;
             min-width: 0;
-            min-height: 128px;
+            min-height: 100px;
             padding: 0.42rem 0.42rem 0.5rem;
             border-right: 1px solid {BORDER};
             border-bottom: 1px solid {BORDER};
