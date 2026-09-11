@@ -185,6 +185,10 @@ def inject_brand_styles(data: dict):
         letter-spacing: 0.04em;
         color: var(--pbm-muted);
     }}
+    .pbm-grid-header .pbm-grid-cell:nth-child(3) {{
+    justify-content: center !important;
+    text-align: center !important;
+    }}
     .pbm-grid-total {{
         min-height: 42px;
         padding: 0.34rem 0.36rem;
