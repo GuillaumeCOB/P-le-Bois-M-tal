@@ -1,6 +1,6 @@
 """
-Outil interne de gestion de projets — Pôle BOIS/METAL
-Version modulaire : app.py pilote l'application, les vues et styles sont séparés.
+Outil interne de gestion de projets — Pôle Structures
+Version hiérarchique : Projet -> Sous-projet / phase -> Tâche.
 
 Lancement local : streamlit run app.py
 """
@@ -8,7 +8,7 @@ Lancement local : streamlit run app.py
 import streamlit as st
 
 st.set_page_config(
-    page_title="Builders - Verticalsea - Gestion Pôle BOIS",
+    page_title="Builders - Verticalsea - Gestion Structures",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -17,6 +17,7 @@ from data_service import load_data_cached
 from ui.components import ui_container
 from ui.header import render_header
 from ui.styles import inject_brand_styles
+from views.a_facturer import render_a_facturer
 from views.calendrier import render_calendrier
 from views.gantt import render_gantt
 from views.nouveau_projet import render_nouveau_projet
@@ -34,7 +35,7 @@ except Exception as e:
     st.error(
         "Impossible de se connecter à la base de données partagée. "
         "Vérifiez que SUPABASE_URL et SUPABASE_KEY sont bien configurés "
-        "dans les secrets de l'application (voir README.md)."
+        "dans les secrets de l'application (voir README.txt)."
     )
     st.exception(e)
     st.stop()
@@ -46,9 +47,9 @@ if "pbm_active_page" not in st.session_state:
     st.session_state["pbm_active_page"] = "Tableau"
 
 with ui_container("pbm_main_navigation", "nav"):
-    nav_cols = st.columns([1.0, 1.45, 1.1, 0.85, 1.15, 5.0], gap="small")
-    nav_items = ["Tableau", "Nouveau projet", "Calendrier", "Gantt", "Paramètres"]
-    for col, page_name in zip(nav_cols[:5], nav_items):
+    nav_cols = st.columns([1.0, 1.42, 1.05, 1.05, 0.85, 1.15, 4.5], gap="small")
+    nav_items = ["Tableau", "Nouveau projet", "À facturer", "Calendrier", "Gantt", "Paramètres"]
+    for col, page_name in zip(nav_cols[:6], nav_items):
         with col:
             st.button(
                 page_name,
@@ -65,6 +66,8 @@ if active_page == "Tableau":
     render_tableau(data)
 elif active_page == "Nouveau projet":
     render_nouveau_projet(data)
+elif active_page == "À facturer":
+    render_a_facturer(data)
 elif active_page == "Calendrier":
     render_calendrier(data)
 elif active_page == "Gantt":

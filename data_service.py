@@ -28,10 +28,16 @@ def run_db_action(action_name: str, *args):
     invalidate_data_cache()
 
 
-def set_subtask_done(project_id: str, subtask_id: str, state_key: str):
+def set_invoice_state_from_widget(
+    level: str,
+    project_id: str,
+    entity_id: str | None,
+    state_key: str,
+):
     run_db_action(
-        "update_subtask",
+        "set_invoice_state",
+        level,
         project_id,
-        subtask_id,
-        {"done": bool(st.session_state.get(state_key, False))},
+        entity_id,
+        bool(st.session_state.get(state_key, False)),
     )

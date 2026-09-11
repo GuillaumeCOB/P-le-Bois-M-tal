@@ -12,10 +12,19 @@ BORDER = "#D8D9E5"
 
 LOGO_PATH = Path(__file__).parent / "assets" / "logo_builders_verticalsea.png"
 
-ROW_WIDTHS = [0.38, 0.78, 2.85, 0.95, 1.55, 1.15, 1.0, 0.95, 0.95, 0.72]
-ROW_LABELS = ["", "N°", "Projet", "Type", "Collaborateurs", "Statut", "Échéance", "Budget", "Heures", "Tâches"]
-TOTAL_WIDTHS = [0.38, 0.78, 2.85, 0.95, 1.55, 1.15, 1.0, 0.95, 0.95, 0.72]
+DISCIPLINES = ["Bois / Métal", "Béton"]
+DISCIPLINE_COLORS = {
+    "Bois / Métal": "#005C4D",
+    "Béton": "#3B38F5",
+}
 
-# Petit cache réseau : évite une requête Supabase à chaque clic purement visuel.
-# Les écritures invalident immédiatement ce cache.
+PROJECT_ROW_WIDTHS = [0.46, 0.38, 0.82, 3.1, 1.65, 1.02, 0.92]
+PROJECT_ROW_LABELS = ["Fact.", "", "N°", "Projet", "Client", "Budget", "Heures"]
+
+SUBPROJECT_ROW_WIDTHS = [0.46, 0.38, 1.05, 1.0, 1.55, 1.18, 1.0, 0.95, 0.92]
+SUBPROJECT_ROW_LABELS = ["Fact.", "", "Phase", "Type", "Collaborateur", "Statut", "Échéance", "Budget", "Heures"]
+
+TASK_ROW_WIDTHS = [0.46, 0.38, 2.95, 1.55, 1.18, 1.0, 0.95, 0.92]
+TASK_ROW_LABELS = ["Fact.", "", "Tâche", "Collaborateur", "Statut", "Échéance", "Budget", "Heures"]
+
 DATA_CACHE_TTL_SECONDS = 5

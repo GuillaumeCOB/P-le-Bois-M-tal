@@ -1,45 +1,72 @@
-REORGANISATION DU PROJET
-========================
+Outil interne de gestion de projets - Builders / Verticalsea
+===========================================================
 
-1. Conserver à la racine vos fichiers existants :
-   - storage.py
-   - requirements.txt
-   - .streamlit/secrets.toml uniquement en local si vous en utilisez un
+STRUCTURE DU PROJET
+-------------------
+Projet
+  -> Sous-projet / phase
+       -> Tache
 
-2. Remplacer l'ancien app.py par le nouvel app.py.
+Le projet porte :
+- Numero de projet
+- Nom
+- Client
+- Structure : Bois / Metal ou Beton
+- Budget total calcule automatiquement = somme des budgets des sous-projets
+- Heures totales calculees automatiquement = somme des heures des sous-projets
 
-3. Ajouter à la racine :
-   - config.py
-   - data_service.py
+Chaque sous-projet / phase porte :
+- Phase
+- Type
+- Collaborateurs
+- Statut
+- Echeance
+- Budget
+- Heures
 
-4. Ajouter les dossiers :
-   - ui/
-   - views/
+Chaque tache porte :
+- Nom
+- Collaborateurs
+- Statut
+- Echeance
+- Budget
+- Heures
 
-5. Conserver le dossier assets/ et son logo.
+FACTURATION
+-----------
+Une case "A facturer" est disponible sur les 3 niveaux.
+Le clic enregistre l'heure exacte en fuseau Europe/Paris et le montant au moment du clic.
+Le nouvel onglet "A facturer" regroupe ensuite les elements par mois de facturation.
 
-Structure finale :
+Pour eviter les doubles comptages :
+- si un projet complet est coche, ses sous-projets et taches sont retires de la facturation individuelle ;
+- si un sous-projet est coche, ses taches sont retirees de la facturation individuelle.
 
-projet/
-├── app.py
-├── config.py
-├── data_service.py
-├── storage.py                 <- votre fichier actuel, inchangé
-├── requirements.txt           <- votre fichier actuel, inchangé
-├── assets/
-│   └── logo_builders_verticalsea.png
-├── ui/
-│   ├── __init__.py
-│   ├── components.py
-│   ├── header.py
-│   └── styles.py
-└── views/
-    ├── __init__.py
-    ├── tableau.py
-    ├── nouveau_projet.py
-    ├── calendrier.py
-    ├── gantt.py
-    └── parametres.py
+MIGRATION DES DONNEES EXISTANTES
+--------------------------------
+La migration est automatique au premier chargement :
+- chaque ancien projet devient un projet de niveau 1 ;
+- ses anciennes informations operationnelles deviennent un premier sous-projet ;
+- ses anciennes sous-taches deviennent des taches ;
+- les anciens projets sont classes par defaut en "Bois / Metal" ;
+- le champ Client est initialise vide.
 
-Aucune migration Supabase n'est nécessaire.
-La réorganisation ne change pas la structure des données.
+Il est recommande de conserver une sauvegarde des donnees Supabase avant le premier deploiement de cette version.
+
+DEPLOIEMENT
+-----------
+Conserver les fichiers/dossiers :
+- .gitignore
+- .devcontainer/
+- .streamlit/
+- storage.py
+- requirements.txt
+- assets/
+- ui/
+- views/
+
+Ne jamais publier .streamlit/secrets.toml dans GitHub.
+Le .gitignore fourni l'exclut deja.
+
+Lancement local :
+streamlit run app.py
