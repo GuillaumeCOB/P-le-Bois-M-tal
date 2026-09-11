@@ -70,7 +70,7 @@ def _invoice_entries(data: dict) -> list[dict]:
                         {
                             **base,
                             "Niveau": "Sous-projet",
-                            "Élément": subproject.get("phase") or "Phase",
+                            "Élément": subproject.get("type") or subproject.get("phase") or "Sous-projet",
                             "Montant": float(subproject.get("invoice_amount") or 0),
                             "Date": marked_at,
                         }
@@ -87,7 +87,7 @@ def _invoice_entries(data: dict) -> list[dict]:
                     {
                         **base,
                         "Niveau": "Tâche",
-                        "Élément": f"{subproject.get('phase') or 'Phase'} · {task.get('name') or 'Tâche'}",
+                        "Élément": f"{subproject.get('type') or subproject.get('phase') or 'Sous-projet'} · {task.get('name') or 'Tâche'}",
                         "Montant": float(task.get("invoice_amount") or 0),
                         "Date": marked_at,
                     }

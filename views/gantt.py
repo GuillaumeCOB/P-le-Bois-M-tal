@@ -37,7 +37,7 @@ def render_gantt(data: dict):
                 start = _business_start(end, float(item.get("estimated_time", 0) or 0))
                 label = (
                     f"{project.get('project_number') or '—'} · {project.get('name') or ''} · "
-                    f"{subproject.get('phase') or 'Phase'}"
+                    f"{subproject.get('type') or subproject.get('phase') or 'Sous-projet'}"
                 )
                 if item is not subproject:
                     label += f" · {item.get('name') or 'Tâche'}"
@@ -46,7 +46,7 @@ def render_gantt(data: dict):
                         "Élément": label,
                         "Début": start,
                         "Fin": end + timedelta(days=1),
-                        "Statut": item.get("status") or subproject.get("status") or "—",
+                        "Statut": project.get("status") or "—",
                         "Type": subproject.get("type") or "—",
                         "Assigné": ", ".join(item.get("assigned", [])) or "—",
                         "Client": project.get("client") or "—",

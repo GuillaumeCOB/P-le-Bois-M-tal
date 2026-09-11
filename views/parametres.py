@@ -67,8 +67,8 @@ def render_parametres(data: dict):
                 st.rerun()
 
     with settings_cols[2]:
-        st.markdown("### 🏗️ Types de projet")
-        st.caption("Ex. DIAGNOSTIC, APS, APD, PRO, DCE, EXE…")
+        st.markdown("### 🏗️ Types de sous-projet")
+        st.caption("Le type correspond à la phase : DIAGNOSTIC, APS, APD, PRO, DCE, EXE…")
         n_types = len(data["types"])
         for i, t in enumerate(data["types"]):
             c1, c2, c3, c4 = st.columns([3, 0.7, 0.7, 0.7])

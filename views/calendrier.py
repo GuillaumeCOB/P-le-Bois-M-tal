@@ -118,7 +118,7 @@ def _planning_items(data: dict):
                     items.append(
                         {
                             **task,
-                            "display_name": f"{subproject.get('phase') or 'Phase'} · {task.get('name') or 'Tâche'}",
+                            "display_name": f"{subproject.get('type') or subproject.get('phase') or 'Sous-projet'} · {task.get('name') or 'Tâche'}",
                             "project_number": project.get("project_number"),
                             "project_name": project.get("name"),
                             "type": subproject.get("type"),
@@ -128,7 +128,7 @@ def _planning_items(data: dict):
                 items.append(
                     {
                         **subproject,
-                        "display_name": subproject.get("phase") or "Phase",
+                        "display_name": subproject.get("type") or subproject.get("phase") or "Sous-projet",
                         "project_number": project.get("project_number"),
                         "project_name": project.get("name"),
                     }
