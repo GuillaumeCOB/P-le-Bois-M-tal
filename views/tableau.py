@@ -100,6 +100,58 @@ def edit_project_dialog(p: dict, data: dict):
         st.rerun()
 
 
+@st.dialog("Modifier la sous-tâche")
+def edit_subtask_dialog(project_id: str, subtask: dict, data: dict):
+    with st.form(f"dialog_edit_subtask_{subtask['id']}"):
+        name = st.text_input("Nom de la sous-tâche", value=str(subtask.get("name") or ""))
+        assigned = st.multiselect(
+            "Personnes assignées",
+            data["collaborators"],
+            default=[
+                person
+                for person in subtask.get("assigned", [])
+                if person in data["collaborators"]
+            ],
+        )
+        estimated_time = st.number_input(
+            "Temps estimé (h)",
+            min_value=0.0,
+            step=0.5,
+            value=float(subtask.get("estimated_time", 0.0) or 0.0),
+        )
+        done = st.checkbox("Sous-tâche terminée", value=bool(subtask.get("done", False)))
+
+        save = st.form_submit_button("💾 Enregistrer", use_container_width=True)
+
+    if save:
+        if not name.strip():
+            st.error("Le nom de la sous-tâche est obligatoire.")
+            return
+        run_db_action(
+            "update_subtask",
+            project_id,
+            subtask["id"],
+            {
+                "name": name.strip(),
+                "assigned": assigned,
+                "estimated_time": estimated_time,
+                "done": done,
+            },
+        )
+        st.rerun()
+
+
+def project_matches_collaborator(project: dict, collaborator: str | None) -> bool:
+    if collaborator is None:
+        return True
+    if collaborator in project.get("assigned", []):
+        return True
+    return any(
+        collaborator in subtask.get("assigned", [])
+        for subtask in project.get("subtasks", [])
+    )
+
+
 def render_group_summary(data: dict):
     if "pbm_summary_status" not in st.session_state:
         st.session_state["pbm_summary_status"] = None
@@ -178,8 +230,14 @@ def render_subtasks(p: dict, data: dict):
                     on_change=set_subtask_done,
                     args=(pid, s["id"], done_key),
                 )
-                with sc[3]:
-                    cell(s["name"], "done" if s.get("done") else "")
+                subtask_label = f"~~{s['name']}~~" if s.get("done") else s["name"]
+                if sc[3].button(
+                    subtask_label,
+                    key=f"subname_{s['id']}",
+                    use_container_width=True,
+                    help="Modifier la sous-tâche",
+                ):
+                    edit_subtask_dialog(pid, s, data)
                 with sc[4]:
                     cell(", ".join(s.get("assigned", [])) or "—")
                 with sc[5]:
@@ -304,7 +362,7 @@ def render_tableau(data: dict):
             projects = [
                 p for p in data["projects"]
                 if (not query or query in project_search_blob(p))
-                and (person_filter is None or person_filter in p.get("assigned", []))
+                and project_matches_collaborator(p, person_filter)
                 and (summary_status is None or p.get("status") == summary_status)
                 and (type_filter is None or p.get("type") == type_filter)
             ]
