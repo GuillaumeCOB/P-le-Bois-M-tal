@@ -12,6 +12,21 @@ from ui.components import hex_to_rgba, safe_color
 WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 HOURS_PER_DAY = 8
 
+MOIS_FR = [
+    "",
+    "Janvier",
+    "Février",
+    "Mars",
+    "Avril",
+    "Mai",
+    "Juin",
+    "Juillet",
+    "Août",
+    "Septembre",
+    "Octobre",
+    "Novembre",
+    "Décembre",
+]
 
 def _change_calendar_month(delta: int):
     month = st.session_state.cal_month + delta
@@ -297,9 +312,10 @@ def render_calendrier(data: dict):
         use_container_width=True,
     )
     nav2.markdown(
-        f"<h4 style='text-align:center; color:{PRIMARY_DARK}; margin:0;'>"
-        f"{cal.month_name[st.session_state.cal_month]} {st.session_state.cal_year}</h4>",
-        unsafe_allow_html=True,
+    f"<h4 style='text-align:center; color:{PRIMARY_DARK}'>"
+    f"{MOIS_FR[st.session_state.cal_month]} {st.session_state.cal_year}"
+    f"</h4>",
+    unsafe_allow_html=True,
     )
     nav3.button(
         "Mois suivant ▶",
