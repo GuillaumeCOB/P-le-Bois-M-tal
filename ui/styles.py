@@ -63,8 +63,28 @@ def inject_brand_styles(data: dict):
     }}
     h3 {{font-size: 1rem !important;}}
 
+    /* Les marqueurs servent uniquement à cibler les conteneurs CSS.
+       Ils ne doivent jamais réserver de hauteur dans la page. */
+    .pbm-marker {{
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 0 !important;
+    }}
+    [data-testid="stMarkdownContainer"]:has(.pbm-marker),
+    [data-testid="stMarkdownContainer"]:has(.pbm-marker) p,
     :is(.element-container, [data-testid="stElementContainer"]):has(.pbm-marker) {{
         display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 0 !important;
+        overflow: hidden !important;
     }}
 
     [data-testid="stButton"] button,
@@ -243,38 +263,37 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-muted);
     }}
 
-    /* En-têtes imbriqués volontairement très discrets. */
+    /* En-têtes des niveaux 2 et 3 : repères très légers, sans effet de carte. */
     {subprojects} .pbm-grid-header-wrap,
     {tasks} .pbm-grid-header-wrap {{
-        padding-bottom: 4px;
+        padding-bottom: 2px;
     }}
     {subprojects} .pbm-grid-header,
     {tasks} .pbm-grid-header {{
-        min-height: 22px;
-        padding: 0.02rem 0.18rem;
-        margin: 0.04rem 0 0;
+        min-height: 17px;
+        padding: 0 0.12rem;
+        margin: 0;
         background: transparent;
         border: 0;
-        border-bottom: 1px solid rgba(64,51,140,0.08);
+        border-bottom: 1px solid rgba(64,51,140,0.055);
         border-radius: 0;
     }}
     {subprojects} .pbm-grid-header .pbm-grid-cell,
     {tasks} .pbm-grid-header .pbm-grid-cell {{
-        min-height: 20px;
-        padding-top: 0;
-        padding-bottom: 0;
-        font-size: 0.58rem;
+        min-height: 16px;
+        padding: 0 0.20rem;
+        font-size: 0.54rem;
         line-height: 1;
         font-weight: 650;
         letter-spacing: 0.035em;
-        color: rgba(112,117,154,0.78);
+        color: rgba(112,117,154,0.64);
     }}
     {tasks} .pbm-grid-header {{
-        border-bottom-color: rgba(64,51,140,0.055);
+        border-bottom-color: rgba(64,51,140,0.04);
     }}
     {tasks} .pbm-grid-header .pbm-grid-cell {{
-        font-size: 0.56rem;
-        color: rgba(112,117,154,0.68);
+        font-size: 0.52rem;
+        color: rgba(112,117,154,0.56);
     }}
 
     .pbm-grid-total {{
@@ -312,12 +331,14 @@ def inject_brand_styles(data: dict):
 
     {project} {{margin-bottom: 0.25rem;}}
 
-    /* Hiérarchie compacte : projet > sous-projet > tâche. */
+    /* Hiérarchie compacte. On laisse Streamlit calculer la taille naturelle
+       des éléments internes au lieu de leur imposer plusieurs hauteurs concurrentes. */
     {projectrow}, {subprojectrow}, {taskrow} {{
-        padding: 0 0.30rem;
-        border-bottom: 1px solid rgba(64,51,140,0.055);
-        border-radius: 9px;
+        padding: 1px 0.30rem;
+        border-bottom: 1px solid rgba(64,51,140,0.05);
+        border-radius: 8px;
         transition: background 0.15s ease;
+        box-sizing: border-box;
     }}
     {projectrow} {{
         min-height: 34px;
@@ -327,145 +348,150 @@ def inject_brand_styles(data: dict):
     {subprojectrow} {{min-height: 30px;}}
     {taskrow} {{
         min-height: 28px;
-        background: rgba(255,255,255,0.56);
+        background: rgba(255,255,255,0.38);
     }}
     {projectrow}:hover,
     {subprojectrow}:hover,
-    {taskrow}:hover {{background: rgba(64,51,140,0.045);}}
+    {taskrow}:hover {{background: rgba(64,51,140,0.04);}}
 
     {projectrow} [data-testid="stHorizontalBlock"],
     {subprojectrow} [data-testid="stHorizontalBlock"],
     {taskrow} [data-testid="stHorizontalBlock"] {{
-        gap: 8px !important;
+        gap: 6px !important;
         align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }}
     {projectrow} [data-testid="stHorizontalBlock"] > div,
     {subprojectrow} [data-testid="stHorizontalBlock"] > div,
     {taskrow} [data-testid="stHorizontalBlock"] > div {{
-        display: flex !important;
-        align-items: center !important;
         min-width: 0 !important;
+        align-self: center !important;
     }}
-    {projectrow} [data-testid="stHorizontalBlock"] > div {{min-height: 30px !important;}}
-    {subprojectrow} [data-testid="stHorizontalBlock"] > div {{min-height: 26px !important;}}
-    {taskrow} [data-testid="stHorizontalBlock"] > div {{min-height: 24px !important;}}
-
-    {projectrow} [data-testid="stHorizontalBlock"] > div > div,
-    {subprojectrow} [data-testid="stHorizontalBlock"] > div > div,
-    {taskrow} [data-testid="stHorizontalBlock"] > div > div {{width: 100% !important;}}
 
     {projectrow} [data-testid="stVerticalBlock"],
     {subprojectrow} [data-testid="stVerticalBlock"],
     {taskrow} [data-testid="stVerticalBlock"] {{
         gap: 0 !important;
-        min-width: 0;
+        min-width: 0 !important;
     }}
 
     {projectrow} :is(.element-container, [data-testid="stElementContainer"]),
     {subprojectrow} :is(.element-container, [data-testid="stElementContainer"]),
     {taskrow} :is(.element-container, [data-testid="stElementContainer"]) {{
-        margin: 0 !important;
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
     }}
-    {projectrow} :is(.element-container, [data-testid="stElementContainer"]) {{min-height: 30px !important;}}
-    {subprojectrow} :is(.element-container, [data-testid="stElementContainer"]) {{min-height: 26px !important;}}
-    {taskrow} :is(.element-container, [data-testid="stElementContainer"]) {{min-height: 24px !important;}}
 
     {projectrow} [data-testid="stMarkdownContainer"],
     {subprojectrow} [data-testid="stMarkdownContainer"],
     {taskrow} [data-testid="stMarkdownContainer"] {{
         width: 100% !important;
-        display: flex !important;
-        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }}
-    {projectrow} [data-testid="stMarkdownContainer"] {{min-height: 30px !important;}}
-    {subprojectrow} [data-testid="stMarkdownContainer"] {{min-height: 26px !important;}}
-    {taskrow} [data-testid="stMarkdownContainer"] {{min-height: 24px !important;}}
     {projectrow} [data-testid="stMarkdownContainer"] p,
     {subprojectrow} [data-testid="stMarkdownContainer"] p,
-    {taskrow} [data-testid="stMarkdownContainer"] p {{margin: 0 !important; line-height: 1.05 !important;}}
+    {taskrow} [data-testid="stMarkdownContainer"] p {{
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.08 !important;
+    }}
 
     {projectrow} .pbm-cell {{min-height: 30px; font-size: 0.81rem; padding-top:0; padding-bottom:0;}}
     {subprojectrow} .pbm-cell {{min-height: 26px; font-size: 0.79rem; padding-top:0; padding-bottom:0;}}
     {taskrow} .pbm-cell {{min-height: 24px; font-size: 0.77rem; padding-top:0; padding-bottom:0;}}
 
+    {projectrow} [data-testid="stButton"],
+    {subprojectrow} [data-testid="stButton"],
+    {taskrow} [data-testid="stButton"] {{
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
     {projectrow} [data-testid="stButton"] button,
     {subprojectrow} [data-testid="stButton"] button,
     {taskrow} [data-testid="stButton"] button {{
-        display: flex;
-        align-items: center;
-        padding: 0 0.28rem;
-        border: 1px solid transparent;
-        border-radius: 7px;
-        background: transparent;
+        min-height: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 0.26rem !important;
+        border: 1px solid transparent !important;
+        border-radius: 6px !important;
+        background: transparent !important;
+        box-shadow: none !important;
     }}
-    {projectrow} [data-testid="stButton"] button {{min-height:30px !important; height:30px !important;}}
-    {subprojectrow} [data-testid="stButton"] button {{min-height:26px !important; height:26px !important;}}
-    {taskrow} [data-testid="stButton"] button {{min-height:24px !important; height:24px !important;}}
+    {projectrow} [data-testid="stButton"] button {{height: 28px !important;}}
+    {subprojectrow} [data-testid="stButton"] button {{height: 25px !important;}}
+    {taskrow} [data-testid="stButton"] button {{height: 23px !important;}}
     {projectrow} [data-testid="stButton"] button:hover,
     {subprojectrow} [data-testid="stButton"] button:hover,
     {taskrow} [data-testid="stButton"] button:hover {{
-        background: rgba(255,255,255,0.52);
-        border-color: rgba(64,51,140,0.07);
+        background: rgba(255,255,255,0.52) !important;
+        border-color: rgba(64,51,140,0.07) !important;
     }}
     {projectrow} [data-testid="stButton"] button p,
     {subprojectrow} [data-testid="stButton"] button p,
     {taskrow} [data-testid="stButton"] button p {{
         line-height: 1 !important;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: block;
-        margin: 0;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: block !important;
+        margin: 0 !important;
     }}
     {projectrow} [data-testid="stButton"] button p {{font-size:0.81rem;}}
     {subprojectrow} [data-testid="stButton"] button p {{font-size:0.79rem;}}
     {taskrow} [data-testid="stButton"] button p {{font-size:0.77rem;}}
+
     {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(4) [data-testid="stButton"] button,
     {subprojectrow} [data-testid="stHorizontalBlock"] > :nth-child(3) [data-testid="stButton"] button,
     {taskrow} [data-testid="stHorizontalBlock"] > :nth-child(3) [data-testid="stButton"] button {{
-        justify-content:flex-start;
-        text-align:left;
-        font-weight:700;
+        justify-content:flex-start !important;
+        text-align:left !important;
+        font-weight:700 !important;
     }}
 
     {projectrow} [data-testid="stCheckbox"],
     {subprojectrow} [data-testid="stCheckbox"],
-    {taskrow} [data-testid="stCheckbox"],
+    {taskrow} [data-testid="stCheckbox"] {{
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }}
     {projectrow} [data-testid="stCheckbox"] label,
     {subprojectrow} [data-testid="stCheckbox"] label,
     {taskrow} [data-testid="stCheckbox"] label {{
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
         display:flex !important;
         align-items:center !important;
         justify-content:center !important;
-        margin:0 !important;
-        padding:0 !important;
     }}
-    {projectrow} [data-testid="stCheckbox"],
-    {projectrow} [data-testid="stCheckbox"] label {{min-height:30px !important; height:30px !important;}}
-    {subprojectrow} [data-testid="stCheckbox"],
-    {subprojectrow} [data-testid="stCheckbox"] label {{min-height:26px !important; height:26px !important;}}
-    {taskrow} [data-testid="stCheckbox"],
-    {taskrow} [data-testid="stCheckbox"] label {{min-height:24px !important; height:24px !important;}}
+    {projectrow} [data-testid="stCheckbox"] label {{height:28px !important;}}
+    {subprojectrow} [data-testid="stCheckbox"] label {{height:25px !important;}}
+    {taskrow} [data-testid="stCheckbox"] label {{height:23px !important;}}
 
     {subprojects} {{
-        margin: 0.08rem 0 0.30rem 1.05rem;
-        width: calc(100% - 1.05rem);
-        padding: 0.12rem 0.36rem 0.24rem 0.54rem;
-        border-left: 2px solid rgba(59,56,245,0.18);
-        background: rgba(255,255,255,0.34);
-        border-radius: 0 0 9px 9px;
+        margin: 0.06rem 0 0.22rem 0.85rem;
+        width: calc(100% - 0.85rem);
+        padding: 0.04rem 0.16rem 0.12rem 0.42rem;
+        border-left: 2px solid rgba(59,56,245,0.16);
+        background: transparent;
+        border-radius: 0;
     }}
 
     {tasks} {{
-        margin: 0.06rem 0 0.24rem 0.82rem;
-        width: calc(100% - 0.82rem);
-        padding: 0.10rem 0.28rem 0.20rem 0.44rem;
-        border-left: 1px solid rgba(64,51,140,0.13);
-        background: rgba(248,248,253,0.38);
-        border-radius: 0 0 8px 8px;
+        margin: 0.04rem 0 0.14rem 0.72rem;
+        width: calc(100% - 0.72rem);
+        padding: 0.02rem 0.12rem 0.08rem 0.34rem;
+        border-left: 1px solid rgba(64,51,140,0.10);
+        background: transparent;
+        border-radius: 0;
     }}
 
     {subprojects} [data-testid="stForm"],
