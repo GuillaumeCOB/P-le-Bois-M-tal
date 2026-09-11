@@ -146,14 +146,14 @@ def project_search_blob(project: dict) -> str:
         project.get("name"),
         project.get("client"),
         project.get("discipline"),
+        project.get("status"),
         project.get("remarks"),
     ]
     for subproject in project.get("subprojects", []):
         values.extend(
             [
-                subproject.get("phase"),
                 subproject.get("type"),
-                subproject.get("status"),
+                subproject.get("phase"),  # compatibilité avec les données v2
                 subproject.get("remarks"),
                 " ".join(subproject.get("assigned", [])),
             ]
@@ -162,7 +162,6 @@ def project_search_blob(project: dict) -> str:
             values.extend(
                 [
                     task.get("name"),
-                    task.get("status"),
                     task.get("remarks"),
                     " ".join(task.get("assigned", [])),
                 ]
@@ -172,10 +171,20 @@ def project_search_blob(project: dict) -> str:
 
 def render_project_group_total(projects: list[dict], widths):
     total_budget, total_hours = projects_totals(projects)
-    values = ["", "", "", "TOTAL", f"{len(projects)} projet{'s' if len(projects) != 1 else ''}", display_amount(total_budget), display_hours(total_hours)]
+    values = [
+        "",
+        "",
+        "",
+        "TOTAL",
+        f"{len(projects)} projet{'s' if len(projects) != 1 else ''}",
+        "",
+        "",
+        display_amount(total_budget),
+        display_hours(total_hours),
+    ]
     cells = []
     for idx, value in enumerate(values):
-        extra = " right" if idx in (5, 6) else " center" if idx in (0, 1, 2) else ""
+        extra = " right" if idx in (7, 8) else " center" if idx in (0, 1, 2) else ""
         cells.append(f'<div class="pbm-grid-cell{extra}">{escape(value)}</div>')
     st.markdown(
         f'<div class="pbm-grid-row pbm-grid-total" style="grid-template-columns:{grid_template(widths)}">'

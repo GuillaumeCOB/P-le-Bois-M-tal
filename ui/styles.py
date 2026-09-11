@@ -322,6 +322,27 @@ def inject_brand_styles(data: dict):
     {subprojectrow} [data-testid="stMarkdownContainer"] p,
     {taskrow} [data-testid="stMarkdownContainer"] p {{margin: 0;}}
 
+    /* Alignement vertical homogène sur les trois niveaux. */
+    {projectrow} :is(.element-container, [data-testid="stElementContainer"]),
+    {subprojectrow} :is(.element-container, [data-testid="stElementContainer"]),
+    {taskrow} :is(.element-container, [data-testid="stElementContainer"]) {{
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        min-height: 30px !important;
+        display: flex !important;
+        align-items: center !important;
+    }}
+    {projectrow} [data-testid="stMarkdownContainer"],
+    {subprojectrow} [data-testid="stMarkdownContainer"],
+    {taskrow} [data-testid="stMarkdownContainer"] {{
+        min-height: 30px !important;
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+    }}
+
     {projectrow} [data-testid="stButton"] button,
     {subprojectrow} [data-testid="stButton"] button,
     {taskrow} [data-testid="stButton"] button {{
@@ -511,6 +532,8 @@ def inject_brand_styles(data: dict):
         color = safe_color(data.get("status_colors", {}).get(status), PRIMARY)
         side_scope = css_scope(f"summary-status-{i}")
         css += (
+            f'[data-testid="stExpander"]:has(.pbm-status-group-{i}-marker) '
+            f'{{border-left:4px solid {color} !important;}}\n'
             f'{side_scope} {{border-left:4px solid {color};padding:0.25rem 0.28rem 0.28rem 0.38rem;'
             'margin-bottom:0.18rem;background:rgba(248,248,253,0.78);border-radius:10px;gap:0 !important;}\n'
         )
