@@ -16,7 +16,7 @@ def render_header():
                 """
                 <div class="pbm-headline">
                     <div class="pbm-eyebrow">Builders · verticalsea</div>
-                    <h1>Suivi de projets - Structures Bois et Métal</h1>
+                    <h1>Suivi de projets - Structures Bois / Métal & Béton</h1>
                     <div class="pbm-subline">Tableau de bord compact, filtrable et aligné sur la charte graphique.</div>
                 </div>
                 """,

@@ -6,13 +6,7 @@ import re
 
 import streamlit as st
 
-from config import (
-    PRIMARY,
-    PRIMARY_DARK,
-    ROW_LABELS,
-    ROW_WIDTHS,
-    TOTAL_WIDTHS,
-)
+from config import PRIMARY, PRIMARY_DARK
 
 _HAS_CONTAINER_KEY = "key" in inspect.signature(st.container).parameters
 
@@ -22,8 +16,7 @@ def safe_color(value: str, fallback: str = PRIMARY) -> str:
 
 
 def hex_to_rgba(value: str, alpha: float) -> str:
-    color = safe_color(value)
-    color = color.lstrip("#")
+    color = safe_color(value).lstrip("#")
     if len(color) == 3:
         color = "".join(ch * 2 for ch in color)
     r = int(color[0:2], 16)
@@ -84,60 +77,6 @@ def badge_cell(text: str, color: str, text_color: str = "white"):
     )
 
 
-def project_number_cell(project: dict):
-    st.markdown(
-        f'<div class="pbm-cell center-cell">{project_number_markup(project)}</div>',
-        unsafe_allow_html=True,
-    )
-
-
-def grid_template(widths) -> str:
-    return " ".join(f"{float(w):g}fr" for w in widths)
-
-
-def render_group_header():
-    classes = []
-    for idx, label in enumerate(ROW_LABELS):
-        extra = " right" if idx in (7, 8) else " center" if idx in (0, 1, 9) else ""
-        classes.append(f'<div class="pbm-grid-cell{extra}">{escape(label)}</div>')
-    st.markdown(
-        '<div class="pbm-grid-header-wrap">'
-        + f'<div class="pbm-grid-row pbm-grid-header" '
-        f'style="grid-template-columns:{grid_template(ROW_WIDTHS)}">'
-        + "".join(classes)
-        + "</div></div>",
-        unsafe_allow_html=True,
-    )
-
-
-def render_group_total_html(projects_in_group: list[dict]):
-    total_budget, total_hours = get_group_totals(projects_in_group)
-    count = len(projects_in_group)
-    values = [
-        "",
-        "",
-        "TOTAL DU GROUPE",
-        "",
-        "",
-        "",
-        f"{count} projet{'s' if count > 1 else ''}",
-        display_amount(total_budget),
-        display_hours(total_hours),
-        "",
-    ]
-    cells = []
-    for idx, value in enumerate(values):
-        extra = " right" if idx in (7, 8) else " center" if idx in (0, 1, 9) else ""
-        cells.append(f'<div class="pbm-grid-cell{extra}">{escape(value)}</div>')
-    st.markdown(
-        f'<div class="pbm-grid-row pbm-grid-total" '
-        f'style="grid-template-columns:{grid_template(TOTAL_WIDTHS)}">'
-        + "".join(cells)
-        + "</div>",
-        unsafe_allow_html=True,
-    )
-
-
 def display_date(value) -> str:
     if not value:
         return "—"
@@ -160,16 +99,87 @@ def project_number_markup(project: dict) -> str:
     return f'<span class="pbm-project-number">{escape(str(number))}</span>'
 
 
-def get_group_totals(projects_in_group: list[dict]) -> tuple[float, float]:
-    total_budget = sum(float(p.get("budget", 0) or 0) for p in projects_in_group)
-    total_hours = sum(float(p.get("estimated_time", 0) or 0) for p in projects_in_group)
-    return total_budget, total_hours
+def project_number_cell(project: dict):
+    st.markdown(
+        f'<div class="pbm-cell center-cell">{project_number_markup(project)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def grid_template(widths) -> str:
+    return " ".join(f"{float(w):g}fr" for w in widths)
+
+
+def render_grid_header(labels, widths, center_indices=(), right_indices=()):
+    cells = []
+    for idx, label in enumerate(labels):
+        extra = " right" if idx in right_indices else " center" if idx in center_indices else ""
+        cells.append(f'<div class="pbm-grid-cell{extra}">{escape(label)}</div>')
+    st.markdown(
+        '<div class="pbm-grid-header-wrap">'
+        + f'<div class="pbm-grid-row pbm-grid-header" style="grid-template-columns:{grid_template(widths)}">'
+        + "".join(cells)
+        + "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def project_totals(project: dict) -> tuple[float, float]:
+    budget = sum(float(sp.get("budget", 0) or 0) for sp in project.get("subprojects", []))
+    hours = sum(float(sp.get("estimated_time", 0) or 0) for sp in project.get("subprojects", []))
+    return budget, hours
+
+
+def projects_totals(projects: list[dict]) -> tuple[float, float]:
+    budget = 0.0
+    hours = 0.0
+    for project in projects:
+        p_budget, p_hours = project_totals(project)
+        budget += p_budget
+        hours += p_hours
+    return budget, hours
 
 
 def project_search_blob(project: dict) -> str:
-    return " ".join([
-        str(project.get("project_number") or ""),
-        str(project.get("name") or ""),
-        str(project.get("remarks") or ""),
-        str(project.get("type") or ""),
-    ]).casefold()
+    values = [
+        project.get("project_number"),
+        project.get("name"),
+        project.get("client"),
+        project.get("discipline"),
+        project.get("remarks"),
+    ]
+    for subproject in project.get("subprojects", []):
+        values.extend(
+            [
+                subproject.get("phase"),
+                subproject.get("type"),
+                subproject.get("status"),
+                subproject.get("remarks"),
+                " ".join(subproject.get("assigned", [])),
+            ]
+        )
+        for task in subproject.get("tasks", []):
+            values.extend(
+                [
+                    task.get("name"),
+                    task.get("status"),
+                    task.get("remarks"),
+                    " ".join(task.get("assigned", [])),
+                ]
+            )
+    return " ".join(str(v or "") for v in values).casefold()
+
+
+def render_project_group_total(projects: list[dict], widths):
+    total_budget, total_hours = projects_totals(projects)
+    values = ["", "", "", "TOTAL", f"{len(projects)} projet{'s' if len(projects) != 1 else ''}", display_amount(total_budget), display_hours(total_hours)]
+    cells = []
+    for idx, value in enumerate(values):
+        extra = " right" if idx in (5, 6) else " center" if idx in (0, 1, 2) else ""
+        cells.append(f'<div class="pbm-grid-cell{extra}">{escape(value)}</div>')
+    st.markdown(
+        f'<div class="pbm-grid-row pbm-grid-total" style="grid-template-columns:{grid_template(widths)}">'
+        + "".join(cells)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
