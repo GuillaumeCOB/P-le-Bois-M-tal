@@ -3,11 +3,23 @@ from datetime import date, datetime
 import streamlit as st
 
 import storage as db
-from config import PATH, PRIMARY, PRIMARY_DARK, ROW_WIDTHS
+from config import (
+    DISCIPLINE_COLORS,
+    DISCIPLINES,
+    PATH,
+    PRIMARY,
+    PRIMARY_DARK,
+    PROJECT_ROW_LABELS,
+    PROJECT_ROW_WIDTHS,
+    SUBPROJECT_ROW_LABELS,
+    SUBPROJECT_ROW_WIDTHS,
+    TASK_ROW_LABELS,
+    TASK_ROW_WIDTHS,
+)
 from data_service import (
     invalidate_data_cache,
     run_db_action,
-    set_subtask_done,
+    set_invoice_state_from_widget,
     toggle_session_flag,
 )
 from ui.components import (
@@ -16,171 +28,357 @@ from ui.components import (
     display_amount,
     display_date,
     display_hours,
-    get_group_totals,
     project_number_cell,
     project_search_blob,
-    render_group_header,
-    render_group_total_html,
+    project_totals,
+    projects_totals,
+    render_grid_header,
+    render_project_group_total,
     ui_container,
 )
 
 
-def _set_summary_status(status):
-    st.session_state["pbm_summary_status"] = status
+def _set_summary_discipline(value):
+    st.session_state["pbm_summary_discipline"] = value
+
+
+def _set_summary_status(value):
+    st.session_state["pbm_summary_status"] = value
+
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _project_matches_collaborator(project: dict, collaborator: str | None) -> bool:
+    if collaborator is None:
+        return True
+    for subproject in project.get("subprojects", []):
+        if collaborator in subproject.get("assigned", []):
+            return True
+        for task in subproject.get("tasks", []):
+            if collaborator in task.get("assigned", []):
+                return True
+    return False
+
+
+def _project_matches_type(project: dict, project_type: str | None) -> bool:
+    if project_type is None:
+        return True
+    return any(sp.get("type") == project_type for sp in project.get("subprojects", []))
+
+
+def _project_matches_status(project: dict, status: str | None) -> bool:
+    if status is None:
+        return True
+    for subproject in project.get("subprojects", []):
+        if subproject.get("status") == status:
+            return True
+        if any(task.get("status") == status for task in subproject.get("tasks", [])):
+            return True
+    return False
+
+
+def _sort_projects(projects: list[dict]) -> list[dict]:
+    return sorted(
+        projects,
+        key=lambda p: (
+            str(p.get("project_number") or "999999999").casefold(),
+            str(p.get("name") or "").casefold(),
+        ),
+    )
 
 
 @st.dialog("Modifier le projet")
-def edit_project_dialog(p: dict, data: dict):
-    with st.form(f"dialog_edit_{p['id']}"):
-        c0, c1, c2 = st.columns([1, 1.2, 1.2])
-        project_number = c0.text_input("N° projet", value=str(p.get("project_number") or ""))
-        name = c1.text_input("Nom du projet", value=p["name"])
-        type_options = ["(aucun)"] + data["types"]
-        current_type = p.get("type") or "(aucun)"
-        type_idx = type_options.index(current_type) if current_type in type_options else 0
-        project_type = c2.selectbox("Type", type_options, index=type_idx)
+def edit_project_dialog(project: dict, data: dict):
+    with st.form(f"dialog_edit_project_{project['id']}"):
+        c1, c2 = st.columns([1.0, 2.0])
+        project_number = c1.text_input(
+            "N° projet", value=str(project.get("project_number") or "")
+        )
+        name = c2.text_input("Nom du projet", value=str(project.get("name") or ""))
 
-        col1, col2 = st.columns(2)
-        with col1:
-            status = st.selectbox(
-                "Statut", data["statuses"], index=data["statuses"].index(p["status"])
-            )
-            assigned = st.multiselect(
-                "Personnes assignées",
-                data["collaborators"],
-                default=[a for a in p.get("assigned", []) if a in data["collaborators"]],
-            )
-            estimated_time = st.number_input(
-                "Temps estimé (h)", min_value=0.0, step=0.5,
-                value=float(p.get("estimated_time", 0.0)),
-            )
-        with col2:
-            start_date_val = st.date_input(
-                "Date de début (optionnel)",
-                value=(
-                    datetime.strptime(p["start_date"], "%Y-%m-%d").date()
-                    if p.get("start_date") else None
-                ),
-            )
-            due_date_val = st.date_input(
-                "Date d'échéance",
-                value=(
-                    datetime.strptime(p["due_date"], "%Y-%m-%d").date()
-                    if p.get("due_date") else date.today()
-                ),
-            )
-            budget = st.number_input(
-                "Budget (€)", min_value=0.0, step=100.0,
-                value=float(p.get("budget", 0.0)),
-            )
-        remarks = st.text_area("Remarques", value=p.get("remarks", ""), height=120)
+        c3, c4 = st.columns([1.8, 1.2])
+        client = c3.text_input("Client", value=str(project.get("client") or ""))
+        discipline = c4.selectbox(
+            "Structure",
+            DISCIPLINES,
+            index=(
+                DISCIPLINES.index(project.get("discipline"))
+                if project.get("discipline") in DISCIPLINES
+                else 0
+            ),
+        )
+        remarks = st.text_area("Remarques", value=project.get("remarks", ""), height=110)
 
         b1, b2 = st.columns(2)
         save = b1.form_submit_button("💾 Enregistrer", use_container_width=True)
         delete = b2.form_submit_button("🗑️ Supprimer le projet", use_container_width=True)
 
     if save:
-        db.update_project(PATH, p["id"], {
-            "project_number": project_number.strip() or None,
-            "name": name,
-            "type": None if project_type == "(aucun)" else project_type,
-            "status": status,
-            "assigned": assigned,
-            "estimated_time": estimated_time,
-            "start_date": start_date_val.isoformat() if start_date_val else None,
-            "due_date": due_date_val.isoformat() if due_date_val else None,
-            "budget": budget,
-            "remarks": remarks,
-        })
+        if not name.strip():
+            st.error("Le nom du projet est obligatoire.")
+            return
+        db.update_project(
+            PATH,
+            project["id"],
+            {
+                "project_number": project_number.strip() or None,
+                "name": name.strip(),
+                "client": client.strip(),
+                "discipline": discipline,
+                "remarks": remarks,
+            },
+        )
         invalidate_data_cache()
         st.rerun()
+
     if delete:
-        db.delete_project(PATH, p["id"])
+        db.delete_project(PATH, project["id"])
         invalidate_data_cache()
         st.rerun()
 
 
-@st.dialog("Modifier la sous-tâche")
-def edit_subtask_dialog(project_id: str, subtask: dict, data: dict):
-    with st.form(f"dialog_edit_subtask_{subtask['id']}"):
-        name = st.text_input("Nom de la sous-tâche", value=str(subtask.get("name") or ""))
-        assigned = st.multiselect(
-            "Personnes assignées",
-            data["collaborators"],
-            default=[
-                person
-                for person in subtask.get("assigned", [])
-                if person in data["collaborators"]
-            ],
+@st.dialog("Modifier le sous-projet / phase")
+def edit_subproject_dialog(project: dict, subproject: dict, data: dict):
+    with st.form(f"dialog_edit_subproject_{subproject['id']}"):
+        top = st.columns([1.2, 1.2])
+        phase = top[0].text_input("Phase", value=str(subproject.get("phase") or ""))
+        type_options = ["(aucun)"] + data["types"]
+        current_type = subproject.get("type") or "(aucun)"
+        project_type = top[1].selectbox(
+            "Type de projet",
+            type_options,
+            index=type_options.index(current_type) if current_type in type_options else 0,
         )
-        estimated_time = st.number_input(
-            "Temps estimé (h)",
-            min_value=0.0,
-            step=0.5,
-            value=float(subtask.get("estimated_time", 0.0) or 0.0),
-        )
-        done = st.checkbox("Sous-tâche terminée", value=bool(subtask.get("done", False)))
 
-        save = st.form_submit_button("💾 Enregistrer", use_container_width=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            status = st.selectbox(
+                "Statut",
+                data["statuses"],
+                index=(
+                    data["statuses"].index(subproject.get("status"))
+                    if subproject.get("status") in data["statuses"]
+                    else 0
+                ),
+            )
+            assigned = st.multiselect(
+                "Collaborateurs",
+                data["collaborators"],
+                default=[
+                    person
+                    for person in subproject.get("assigned", [])
+                    if person in data["collaborators"]
+                ],
+            )
+            estimated_time = st.number_input(
+                "Temps estimé (h)",
+                min_value=0.0,
+                step=0.5,
+                value=float(subproject.get("estimated_time", 0) or 0),
+            )
+        with c2:
+            due_date = st.date_input(
+                "Échéance",
+                value=_parse_date(subproject.get("due_date")) or date.today(),
+            )
+            budget = st.number_input(
+                "Budget (€)",
+                min_value=0.0,
+                step=100.0,
+                value=float(subproject.get("budget", 0) or 0),
+            )
+        remarks = st.text_area(
+            "Remarques", value=subproject.get("remarks", ""), height=90
+        )
+
+        b1, b2 = st.columns(2)
+        save = b1.form_submit_button("💾 Enregistrer", use_container_width=True)
+        delete = b2.form_submit_button("🗑️ Supprimer la phase", use_container_width=True)
 
     if save:
-        if not name.strip():
-            st.error("Le nom de la sous-tâche est obligatoire.")
+        if not phase.strip():
+            st.error("Le nom de la phase est obligatoire.")
             return
         run_db_action(
-            "update_subtask",
-            project_id,
-            subtask["id"],
+            "update_subproject",
+            project["id"],
+            subproject["id"],
             {
-                "name": name.strip(),
+                "phase": phase.strip(),
+                "type": None if project_type == "(aucun)" else project_type,
                 "assigned": assigned,
+                "status": status,
+                "due_date": due_date.isoformat() if due_date else None,
+                "budget": budget,
                 "estimated_time": estimated_time,
-                "done": done,
+                "remarks": remarks,
             },
         )
         st.rerun()
 
-
-def project_matches_collaborator(project: dict, collaborator: str | None) -> bool:
-    if collaborator is None:
-        return True
-    if collaborator in project.get("assigned", []):
-        return True
-    return any(
-        collaborator in subtask.get("assigned", [])
-        for subtask in project.get("subtasks", [])
-    )
+    if delete:
+        run_db_action("delete_subproject", project["id"], subproject["id"])
+        st.rerun()
 
 
-def render_group_summary(data: dict):
+@st.dialog("Modifier la tâche")
+def edit_task_dialog(project: dict, subproject: dict, task: dict, data: dict):
+    with st.form(f"dialog_edit_task_{task['id']}"):
+        name = st.text_input("Nom de la tâche", value=str(task.get("name") or ""))
+        c1, c2 = st.columns(2)
+        with c1:
+            assigned = st.multiselect(
+                "Collaborateurs",
+                data["collaborators"],
+                default=[
+                    person
+                    for person in task.get("assigned", [])
+                    if person in data["collaborators"]
+                ],
+            )
+            status = st.selectbox(
+                "Statut",
+                data["statuses"],
+                index=(
+                    data["statuses"].index(task.get("status"))
+                    if task.get("status") in data["statuses"]
+                    else 0
+                ),
+            )
+            estimated_time = st.number_input(
+                "Temps estimé (h)",
+                min_value=0.0,
+                step=0.5,
+                value=float(task.get("estimated_time", 0) or 0),
+            )
+        with c2:
+            due_date = st.date_input(
+                "Échéance", value=_parse_date(task.get("due_date")) or date.today()
+            )
+            budget = st.number_input(
+                "Budget (€)",
+                min_value=0.0,
+                step=100.0,
+                value=float(task.get("budget", 0) or 0),
+            )
+        remarks = st.text_area("Remarques", value=task.get("remarks", ""), height=90)
+
+        b1, b2 = st.columns(2)
+        save = b1.form_submit_button("💾 Enregistrer", use_container_width=True)
+        delete = b2.form_submit_button("🗑️ Supprimer la tâche", use_container_width=True)
+
+    if save:
+        if not name.strip():
+            st.error("Le nom de la tâche est obligatoire.")
+            return
+        run_db_action(
+            "update_task",
+            project["id"],
+            subproject["id"],
+            task["id"],
+            {
+                "name": name.strip(),
+                "assigned": assigned,
+                "status": status,
+                "due_date": due_date.isoformat() if due_date else None,
+                "budget": budget,
+                "estimated_time": estimated_time,
+                "remarks": remarks,
+            },
+        )
+        st.rerun()
+
+    if delete:
+        run_db_action("delete_task", project["id"], subproject["id"], task["id"])
+        st.rerun()
+
+
+def render_side_summary(data: dict):
+    if "pbm_summary_discipline" not in st.session_state:
+        st.session_state["pbm_summary_discipline"] = None
     if "pbm_summary_status" not in st.session_state:
         st.session_state["pbm_summary_status"] = None
 
+    selected_discipline = st.session_state.get("pbm_summary_discipline")
     selected_status = st.session_state.get("pbm_summary_status")
-    with ui_container("pbm_group_summary", "summary"):
-        st.markdown('<div class="pbm-summary-title">Synthèse par groupe</div>', unsafe_allow_html=True)
+    all_projects = data.get("projects", [])
 
-        all_projects = data.get("projects", [])
-        all_budget, _ = get_group_totals(all_projects)
-        with ui_container("pbm_summary_all", "summary-all"):
+    with ui_container("pbm_group_summary", "summary"):
+        st.markdown('<div class="pbm-summary-title">Synthèse</div>', unsafe_allow_html=True)
+        st.markdown('<div class="pbm-summary-section">Structure</div>', unsafe_allow_html=True)
+
+        total_budget, _ = projects_totals(all_projects)
+        with ui_container("pbm_summary_discipline_all", "summary-discipline-all"):
             st.button(
-                "Tous les groupes",
-                key="summary_all_groups",
+                "Toutes les structures",
+                key="summary_discipline_all",
+                use_container_width=True,
+                type="primary" if selected_discipline is None else "secondary",
+                on_click=_set_summary_discipline,
+                args=(None,),
+            )
+            st.markdown(
+                f'<div class="pbm-side-budget">{len(all_projects)} projet{"s" if len(all_projects) != 1 else ""} - {display_amount(total_budget)}</div>',
+                unsafe_allow_html=True,
+            )
+
+        for i, discipline in enumerate(DISCIPLINES):
+            discipline_projects = [
+                p for p in all_projects if p.get("discipline") == discipline
+            ]
+            discipline_budget, _ = projects_totals(discipline_projects)
+            with ui_container(
+                f"pbm_summary_discipline_{i}", f"summary-discipline-{i}"
+            ):
+                st.button(
+                    discipline,
+                    key=f"summary_discipline_{i}",
+                    use_container_width=True,
+                    type="primary" if selected_discipline == discipline else "secondary",
+                    on_click=_set_summary_discipline,
+                    args=(discipline,),
+                )
+                st.markdown(
+                    f'<div class="pbm-side-budget">{len(discipline_projects)} projet{"s" if len(discipline_projects) != 1 else ""} - {display_amount(discipline_budget)}</div>',
+                    unsafe_allow_html=True,
+                )
+
+        st.markdown('<div class="pbm-summary-section second">Statut des phases</div>', unsafe_allow_html=True)
+
+        status_source_projects = [
+            p
+            for p in all_projects
+            if selected_discipline is None or p.get("discipline") == selected_discipline
+        ]
+        all_subprojects = [
+            sp for p in status_source_projects for sp in p.get("subprojects", [])
+        ]
+        all_phase_budget = sum(float(sp.get("budget", 0) or 0) for sp in all_subprojects)
+        with ui_container("pbm_summary_status_all", "summary-status-all"):
+            st.button(
+                "Tous les statuts",
+                key="summary_status_all",
                 use_container_width=True,
                 type="primary" if selected_status is None else "secondary",
                 on_click=_set_summary_status,
                 args=(None,),
             )
             st.markdown(
-                f'<div class="pbm-side-budget">{len(all_projects)} projet{"s" if len(all_projects) != 1 else ""} - {display_amount(all_budget)}</div>'
-                f'<div class="pbm-side-meta" style="visibility:hidden">&nbsp;</div>',
+                f'<div class="pbm-side-budget">{len(all_subprojects)} phase{"s" if len(all_subprojects) != 1 else ""} - {display_amount(all_phase_budget)}</div>',
                 unsafe_allow_html=True,
             )
 
         for i, status in enumerate(data["statuses"]):
-            group_projects = [p for p in all_projects if p.get("status") == status]
-            group_budget, _ = get_group_totals(group_projects)
-            with ui_container(f"pbm_summary_{i}", f"summary-{i}"):
+            status_subprojects = [sp for sp in all_subprojects if sp.get("status") == status]
+            status_budget = sum(float(sp.get("budget", 0) or 0) for sp in status_subprojects)
+            with ui_container(f"pbm_summary_status_{i}", f"summary-status-{i}"):
                 st.button(
                     status,
                     key=f"summary_status_{i}",
@@ -190,218 +388,358 @@ def render_group_summary(data: dict):
                     args=(status,),
                 )
                 st.markdown(
-                    f'<div class="pbm-side-budget">{len(group_projects)} projet{"s" if len(group_projects) != 1 else ""} - {display_amount(group_budget)}</div>'
-                    f'<div class="pbm-side-meta" style="visibility:hidden">&nbsp;</div>',
+                    f'<div class="pbm-side-budget">{len(status_subprojects)} phase{"s" if len(status_subprojects) != 1 else ""} - {display_amount(status_budget)}</div>',
                     unsafe_allow_html=True,
                 )
 
 
-def render_subtasks(p: dict, data: dict):
-    pid = p["id"]
-    subtasks = p.get("subtasks", [])
-    with ui_container(f"pbm_children_{pid}", "children"):
-        if not subtasks:
-            st.caption("Aucune sous-tâche.")
-        for i, s in enumerate(subtasks):
-            with ui_container(f"pbm_subrow_{s['id']}", "subrow"):
-                sc = st.columns([0.34, 0.34, 0.38, 3.90, 1.55, 1.15, 1.00, 0.95, 0.38], gap="small", vertical_alignment="center")
-                sc[0].button(
-                    "▴",
-                    key=f"subup_{s['id']}",
-                    disabled=(i == 0),
-                    help="Monter",
-                    on_click=run_db_action,
-                    args=("move_subtask", pid, s["id"], -1),
-                )
-                sc[1].button(
-                    "▾",
-                    key=f"subdown_{s['id']}",
-                    disabled=(i == len(subtasks) - 1),
-                    help="Descendre",
-                    on_click=run_db_action,
-                    args=("move_subtask", pid, s["id"], 1),
-                )
-                done_key = f"subdone_{s['id']}"
-                sc[2].checkbox(
-                    f"Terminer : {s['name']}",
-                    value=s.get("done", False),
-                    key=done_key,
+def _render_add_task_form(project: dict, subproject: dict, data: dict):
+    key = f"show_add_task_{subproject['id']}"
+    if key not in st.session_state:
+        st.session_state[key] = False
+
+    st.button(
+        "Masquer le formulaire" if st.session_state[key] else "Ajouter une tâche",
+        key=f"toggle_add_task_{subproject['id']}",
+        on_click=toggle_session_flag,
+        args=(key,),
+    )
+
+    if not st.session_state[key]:
+        return
+
+    with st.form(f"add_task_{subproject['id']}", clear_on_submit=True):
+        r1 = st.columns([2.4, 1.6, 1.2])
+        name = r1[0].text_input("Tâche", placeholder="Nom de la tâche")
+        assigned = r1[1].multiselect("Collaborateur", data["collaborators"])
+        status = r1[2].selectbox("Statut", data["statuses"])
+        r2 = st.columns([1.2, 1.0, 1.0])
+        due_date = r2[0].date_input("Échéance", value=date.today())
+        budget = r2[1].number_input("Budget (€)", min_value=0.0, step=100.0)
+        hours = r2[2].number_input("Heures", min_value=0.0, step=0.5)
+        if st.form_submit_button("Ajouter la tâche") and name.strip():
+            db.add_task(
+                PATH,
+                project["id"],
+                subproject["id"],
+                name.strip(),
+                assigned,
+                status,
+                due_date.isoformat() if due_date else None,
+                budget,
+                hours,
+            )
+            invalidate_data_cache()
+            st.rerun()
+
+
+def render_tasks(project: dict, subproject: dict, data: dict):
+    tasks = subproject.get("tasks", [])
+    with ui_container(f"pbm_tasks_{subproject['id']}", "tasks"):
+        if tasks:
+            render_grid_header(
+                TASK_ROW_LABELS,
+                TASK_ROW_WIDTHS,
+                center_indices=(0, 1),
+                right_indices=(6, 7),
+            )
+        else:
+            st.caption("Aucune tâche.")
+
+        for task in tasks:
+            with ui_container(f"pbm_taskrow_{task['id']}", "taskrow"):
+                cols = st.columns(TASK_ROW_WIDTHS, gap="small", vertical_alignment="center")
+                invoice_key = f"invoice_task_{task['id']}"
+                cols[0].checkbox(
+                    "À facturer",
+                    value=bool(task.get("invoice_ready", False)),
+                    key=invoice_key,
                     label_visibility="collapsed",
-                    on_change=set_subtask_done,
-                    args=(pid, s["id"], done_key),
+                    disabled=bool(project.get("invoice_ready") or subproject.get("invoice_ready")),
+                    help="Cocher pour envoyer cette tâche dans l'onglet À facturer.",
+                    on_change=set_invoice_state_from_widget,
+                    args=("task", project["id"], task["id"], invoice_key),
                 )
-                subtask_label = f"~~{s['name']}~~" if s.get("done") else s["name"]
-                if sc[3].button(
-                    subtask_label,
-                    key=f"subname_{s['id']}",
+                with cols[1]:
+                    cell("↳", "center-cell")
+                if cols[2].button(
+                    task.get("name") or "Tâche",
+                    key=f"task_name_{task['id']}",
                     use_container_width=True,
-                    help="Modifier la sous-tâche",
+                    help="Modifier la tâche",
                 ):
-                    edit_subtask_dialog(pid, s, data)
-                with sc[4]:
-                    cell(", ".join(s.get("assigned", [])) or "—")
-                with sc[5]:
-                    cell("")
-                with sc[6]:
-                    cell("")
-                with sc[7]:
-                    cell(display_hours(s.get("estimated_time")), "number")
-                sc[8].button(
-                    "×",
-                    key=f"subdel_{s['id']}",
-                    help="Supprimer la sous-tâche",
-                    on_click=run_db_action,
-                    args=("delete_subtask", pid, s["id"]),
-                )
+                    edit_task_dialog(project, subproject, task, data)
+                with cols[3]:
+                    cell(", ".join(task.get("assigned", [])) or "—")
+                with cols[4]:
+                    badge_cell(
+                        task.get("status") or "—",
+                        data["status_colors"].get(task.get("status"), PRIMARY),
+                        PRIMARY_DARK,
+                    )
+                with cols[5]:
+                    cell(display_date(task.get("due_date")))
+                with cols[6]:
+                    cell(display_amount(task.get("budget")), "number")
+                with cols[7]:
+                    cell(display_hours(task.get("estimated_time")), "number")
 
-        add_key = f"show_add_subtask_{pid}"
-        if add_key not in st.session_state:
-            st.session_state[add_key] = False
-        add_label = "Masquer le formulaire" if st.session_state[add_key] else "Ajouter une sous-tâche"
-        st.button(
-            add_label,
-            key=f"toggle_add_subtask_{pid}",
-            on_click=toggle_session_flag,
-            args=(add_key,),
-        )
-        if st.session_state[add_key]:
-            with st.form(f"add_subtask_{pid}", clear_on_submit=True):
-                fc1, fc2, fc3, fc4 = st.columns([3.1, 2, 1.2, 1])
-                sub_name = fc1.text_input(
-                    "Nouvelle sous-tâche", label_visibility="collapsed",
-                    placeholder="Nouvelle sous-tâche",
-                )
-                sub_assigned = fc2.multiselect(
-                    "Assignée à", data["collaborators"], label_visibility="collapsed",
-                    placeholder="Assignée à", key=f"sub_assign_{pid}",
-                )
-                sub_time = fc3.number_input(
-                    "Temps (h)", min_value=0.0, step=0.5, label_visibility="collapsed",
-                    key=f"sub_time_{pid}",
-                )
-                if fc4.form_submit_button("Ajouter") and sub_name.strip():
-                    db.add_subtask(PATH, pid, sub_name, sub_assigned, sub_time)
-                    invalidate_data_cache()
-                    st.rerun()
+        _render_add_task_form(project, subproject, data)
 
 
-def render_project_row(p: dict, data: dict):
-    pid = p["id"]
-    expand_key = f"expand_{pid}"
+def _render_add_subproject_form(project: dict, data: dict):
+    key = f"show_add_subproject_{project['id']}"
+    if key not in st.session_state:
+        st.session_state[key] = False
+
+    st.button(
+        "Masquer le formulaire" if st.session_state[key] else "Ajouter un sous-projet / phase",
+        key=f"toggle_add_subproject_{project['id']}",
+        on_click=toggle_session_flag,
+        args=(key,),
+    )
+
+    if not st.session_state[key]:
+        return
+
+    with st.form(f"add_subproject_{project['id']}", clear_on_submit=True):
+        r1 = st.columns([1.2, 1.2, 1.5, 1.2])
+        phase = r1[0].text_input("Phase", placeholder="ACT, DCE, EXE...")
+        type_options = ["(aucun)"] + data["types"]
+        project_type = r1[1].selectbox("Type", type_options)
+        assigned = r1[2].multiselect("Collaborateur", data["collaborators"])
+        status = r1[3].selectbox("Statut", data["statuses"])
+        r2 = st.columns([1.2, 1.0, 1.0])
+        due_date = r2[0].date_input("Échéance", value=date.today())
+        budget = r2[1].number_input("Budget (€)", min_value=0.0, step=100.0)
+        hours = r2[2].number_input("Heures", min_value=0.0, step=0.5)
+        if st.form_submit_button("Ajouter la phase") and phase.strip():
+            db.add_subproject(
+                PATH,
+                project["id"],
+                phase.strip(),
+                None if project_type == "(aucun)" else project_type,
+                assigned,
+                status,
+                due_date.isoformat() if due_date else None,
+                budget,
+                hours,
+            )
+            invalidate_data_cache()
+            st.rerun()
+
+
+def render_subprojects(project: dict, data: dict):
+    subprojects = project.get("subprojects", [])
+    with ui_container(f"pbm_subprojects_{project['id']}", "subprojects"):
+        if subprojects:
+            render_grid_header(
+                SUBPROJECT_ROW_LABELS,
+                SUBPROJECT_ROW_WIDTHS,
+                center_indices=(0, 1),
+                right_indices=(7, 8),
+            )
+        else:
+            st.caption("Aucun sous-projet / phase.")
+
+        for subproject in subprojects:
+            expand_key = f"expand_subproject_{subproject['id']}"
+            if expand_key not in st.session_state:
+                st.session_state[expand_key] = False
+
+            type_color = data["type_colors"].get(subproject.get("type"), PRIMARY)
+            with ui_container(
+                f"pbm_subprojectrow_{subproject['id']}",
+                ["subprojectrow", f"subprojectclr-{subproject['id']}"],
+            ):
+                cols = st.columns(
+                    SUBPROJECT_ROW_WIDTHS, gap="small", vertical_alignment="center"
+                )
+                invoice_key = f"invoice_subproject_{subproject['id']}"
+                cols[0].checkbox(
+                    "À facturer",
+                    value=bool(subproject.get("invoice_ready", False)),
+                    key=invoice_key,
+                    label_visibility="collapsed",
+                    disabled=bool(project.get("invoice_ready")),
+                    help="Cocher pour envoyer cette phase dans l'onglet À facturer.",
+                    on_change=set_invoice_state_from_widget,
+                    args=("subproject", project["id"], subproject["id"], invoice_key),
+                )
+                arrow = "▾" if st.session_state[expand_key] else "▸"
+                cols[1].button(
+                    arrow,
+                    key=f"arrow_subproject_{subproject['id']}",
+                    on_click=toggle_session_flag,
+                    args=(expand_key,),
+                    help="Afficher / masquer les tâches",
+                )
+                if cols[2].button(
+                    subproject.get("phase") or "Phase",
+                    key=f"subproject_name_{subproject['id']}",
+                    use_container_width=True,
+                    help="Modifier le sous-projet / phase",
+                ):
+                    edit_subproject_dialog(project, subproject, data)
+                with cols[3]:
+                    if subproject.get("type"):
+                        badge_cell(subproject["type"], type_color, PRIMARY_DARK)
+                    else:
+                        cell("—")
+                with cols[4]:
+                    cell(", ".join(subproject.get("assigned", [])) or "—")
+                with cols[5]:
+                    badge_cell(
+                        subproject.get("status") or "—",
+                        data["status_colors"].get(subproject.get("status"), PRIMARY),
+                        PRIMARY_DARK,
+                    )
+                with cols[6]:
+                    cell(display_date(subproject.get("due_date")))
+                with cols[7]:
+                    cell(display_amount(subproject.get("budget")), "number")
+                with cols[8]:
+                    cell(display_hours(subproject.get("estimated_time")), "number")
+
+            if st.session_state[expand_key]:
+                render_tasks(project, subproject, data)
+
+        _render_add_subproject_form(project, data)
+
+
+def render_project_row(project: dict, data: dict):
+    project_id = project["id"]
+    expand_key = f"expand_project_{project_id}"
     if expand_key not in st.session_state:
         st.session_state[expand_key] = False
 
-    with ui_container(f"pbm_project_{pid}", "project"):
-        with ui_container(f"pbm_row_{pid}", ["row", f"rowclr-{pid}"]):
-            cols = st.columns(ROW_WIDTHS, gap="small", vertical_alignment="center")
+    total_budget, total_hours = project_totals(project)
+    discipline = project.get("discipline") or DISCIPLINES[0]
+
+    with ui_container(f"pbm_project_{project_id}", "project"):
+        with ui_container(
+            f"pbm_projectrow_{project_id}",
+            ["projectrow", f"discipline-row-{DISCIPLINES.index(discipline) if discipline in DISCIPLINES else 0}"],
+        ):
+            cols = st.columns(PROJECT_ROW_WIDTHS, gap="small", vertical_alignment="center")
+            invoice_key = f"invoice_project_{project_id}"
+            cols[0].checkbox(
+                "À facturer",
+                value=bool(project.get("invoice_ready", False)),
+                key=invoice_key,
+                label_visibility="collapsed",
+                help="Cocher pour envoyer le projet complet dans l'onglet À facturer.",
+                on_change=set_invoice_state_from_widget,
+                args=("project", project_id, None, invoice_key),
+            )
             arrow = "▾" if st.session_state[expand_key] else "▸"
-            cols[0].button(
+            cols[1].button(
                 arrow,
-                key=f"arrow_{pid}",
-                help="Afficher / masquer les sous-tâches",
+                key=f"arrow_project_{project_id}",
+                help="Afficher / masquer les sous-projets",
                 on_click=toggle_session_flag,
                 args=(expand_key,),
             )
-            with cols[1]:
-                project_number_cell(p)
-            if cols[2].button(p["name"], key=f"name_{pid}", use_container_width=True, help=p["name"]):
-                edit_project_dialog(p, data)
-            with cols[3]:
-                ptype = p.get("type")
-                if ptype:
-                    badge_cell(ptype, data["type_colors"].get(ptype, PRIMARY_DARK), PRIMARY_DARK)
-                else:
-                    cell("—")
+            with cols[2]:
+                project_number_cell(project)
+            if cols[3].button(
+                project.get("name") or "Projet",
+                key=f"project_name_{project_id}",
+                use_container_width=True,
+                help="Modifier le projet",
+            ):
+                edit_project_dialog(project, data)
             with cols[4]:
-                cell(", ".join(p.get("assigned", [])) or "—")
+                cell(project.get("client") or "—")
             with cols[5]:
-                badge_cell(p["status"], data["status_colors"].get(p["status"], PRIMARY), PRIMARY_DARK)
+                cell(display_amount(total_budget), "number")
             with cols[6]:
-                cell(display_date(p.get("due_date")))
-            with cols[7]:
-                cell(display_amount(p.get("budget")), "number")
-            with cols[8]:
-                cell(display_hours(p.get("estimated_time")), "number")
-            with cols[9]:
-                subtasks = p.get("subtasks", [])
-                done = sum(1 for s in subtasks if s.get("done"))
-                cell(
-                    f"{done}/{len(subtasks)}" if subtasks else "—",
-                    "progress",
-                    f"{done} sur {len(subtasks)} sous-tâches terminées",
-                )
+                cell(display_hours(total_hours), "number")
+
         if st.session_state[expand_key]:
-            render_subtasks(p, data)
+            render_subprojects(project, data)
 
 
 def render_tableau(data: dict):
     left_col, main_col = st.columns([1.25, 6.75], gap="medium")
 
     with left_col:
-        render_group_summary(data)
+        render_side_summary(data)
 
     with main_col:
         with ui_container("pbm_board", "board"):
             filters = st.columns([1.7, 1.0, 1.0], gap="small")
             query = filters[0].text_input(
-                "Rechercher un projet", placeholder="Rechercher nom, numéro, remarques...",
-                label_visibility="collapsed", key="pbm_search",
+                "Rechercher un projet",
+                placeholder="Rechercher n°, projet, client, phase, tâche...",
+                label_visibility="collapsed",
+                key="pbm_search",
             ).strip().casefold()
             person_filter = filters[1].selectbox(
-                "Collaborateur", [None] + data["collaborators"],
+                "Collaborateur",
+                [None] + data["collaborators"],
                 format_func=lambda x: "Tous les collaborateurs" if x is None else x,
-                label_visibility="collapsed", key="pbm_person",
+                label_visibility="collapsed",
+                key="pbm_person",
             )
             type_filter = filters[2].selectbox(
-                "Type", [None] + data["types"],
+                "Type",
+                [None] + data["types"],
                 format_func=lambda x: "Tous les types" if x is None else x,
-                label_visibility="collapsed", key="pbm_type",
+                label_visibility="collapsed",
+                key="pbm_type",
             )
 
-            summary_status = st.session_state.get("pbm_summary_status")
+            discipline_filter = st.session_state.get("pbm_summary_discipline")
+            status_filter = st.session_state.get("pbm_summary_status")
+
             projects = [
-                p for p in data["projects"]
-                if (not query or query in project_search_blob(p))
-                and project_matches_collaborator(p, person_filter)
-                and (summary_status is None or p.get("status") == summary_status)
-                and (type_filter is None or p.get("type") == type_filter)
+                project
+                for project in data.get("projects", [])
+                if (not query or query in project_search_blob(project))
+                and _project_matches_collaborator(project, person_filter)
+                and _project_matches_type(project, type_filter)
+                and _project_matches_status(project, status_filter)
+                and (
+                    discipline_filter is None
+                    or project.get("discipline") == discipline_filter
+                )
             ]
-            active_filters = bool(
-                query
-                or person_filter is not None
-                or summary_status is not None
-                or type_filter is not None
-            )
 
-            if not data["projects"]:
+            if not data.get("projects"):
                 st.info("Aucun projet. Utilisez l'onglet Nouveau projet pour en créer un.")
             elif not projects:
                 st.info("Aucun projet ne correspond aux filtres.")
 
-            for group_index, status in enumerate(data["statuses"]):
-                if summary_status is not None and status != summary_status:
+            for discipline_index, discipline in enumerate(DISCIPLINES):
+                if discipline_filter is not None and discipline != discipline_filter:
                     continue
 
-                projects_in_group = [p for p in projects if p["status"] == status]
-                if active_filters and not projects_in_group:
+                discipline_projects = _sort_projects(
+                    [p for p in projects if p.get("discipline") == discipline]
+                )
+                if not discipline_projects:
                     continue
 
-                count = len(projects_in_group)
-                total_budget, total_hours = get_group_totals(projects_in_group)
+                total_budget, total_hours = projects_totals(discipline_projects)
+                count = len(discipline_projects)
                 title = (
-                    f"{status} · {count} projet{'s' if count != 1 else ''}"
+                    f"{discipline} · {count} projet{'s' if count != 1 else ''}"
                     f" · {display_amount(total_budget)} · {display_hours(total_hours)}"
                 )
-                with st.expander(title, expanded=bool(projects_in_group)):
-                    with ui_container(f"pbm_group_{group_index}", "group"):
-                        st.markdown(
-                            f'<span class="pbm-marker pbm-group-{group_index}"></span>',
-                            unsafe_allow_html=True,
+                with st.expander(title, expanded=True):
+                    with ui_container(
+                        f"pbm_discipline_group_{discipline_index}",
+                        f"discipline-group-{discipline_index}",
+                    ):
+                        render_grid_header(
+                            PROJECT_ROW_LABELS,
+                            PROJECT_ROW_WIDTHS,
+                            center_indices=(0, 1, 2, 3),
+                            right_indices=(5, 6),
                         )
-                        if not projects_in_group:
-                            st.caption("Aucun projet dans ce groupe.")
-                            continue
-                        render_group_header()
-                        for p in projects_in_group:
-                            render_project_row(p, data)
-                        render_group_total_html(projects_in_group)
+                        for project in discipline_projects:
+                            render_project_row(project, data)
+                        render_project_group_total(
+                            discipline_projects, PROJECT_ROW_WIDTHS
+                        )
