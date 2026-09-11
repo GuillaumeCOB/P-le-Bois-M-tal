@@ -127,7 +127,7 @@ def render_group_total_html(projects_in_group: list[dict]):
     ]
     cells = []
     for idx, value in enumerate(values):
-        extra = " right" if idx in (7, 8) else " center" if idx in (0, 1, 9) else ""
+        extra = " right" if idx in (7, 8) else " center" if idx in (0, 1, 2, 9) else ""
         cells.append(f'<div class="pbm-grid-cell{extra}">{escape(value)}</div>')
     st.markdown(
         f'<div class="pbm-grid-row pbm-grid-total" '
