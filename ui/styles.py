@@ -32,7 +32,7 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-text);
     }}
     .block-container {{
-        padding-top: 3rem;
+        padding-top: 5rem;
         padding-bottom: 1.25rem;
         padding-left: 1.25rem;
         padding-right: 1.25rem;
@@ -302,7 +302,9 @@ def inject_brand_styles(data: dict):
         background: transparent;
     }}
     {row} :is(.element-container, [data-testid="stElementContainer"]),
-    {row} [data-testid="stMarkdownContainer"] {{
+    {subrow} :is(.element-container, [data-testid="stElementContainer"]),
+    {row} [data-testid="stMarkdownContainer"],
+    {subrow} [data-testid="stMarkdownContainer"] {{
         margin-top: 0 !important;
         margin-bottom: 0 !important;
         padding-top: 0 !important;
@@ -339,8 +341,29 @@ def inject_brand_styles(data: dict):
         border-bottom: 1px solid rgba(64,51,140,0.08);
     }}
     {subrow}:last-child {{border-bottom: none;}}
-    {subrow} [data-testid="stCheckbox"] {{min-height: 30px;}}
-    {subrow} [data-testid="stCheckbox"] label {{margin: 0; min-height: 30px;}}
+    {subrow} [data-testid="stCheckbox"] {{
+        min-height: 32px !important;
+        height: 32px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    {subrow} [data-testid="stCheckbox"] label {{
+        min-height: 32px !important;
+        height: 32px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    {subrow} [data-testid="stHorizontalBlock"] > :nth-child(4) [data-testid="stButton"] button {{
+        justify-content: flex-start !important;
+        text-align: left !important;
+        font-weight: 600 !important;
+    }}
     {children} [data-testid="stExpander"] {{border: 0; margin-top: 0.25rem; background: transparent; box-shadow: none;}}
     {children} [data-testid="stExpander"] summary {{padding: 0.18rem 0;}}
     {children} [data-testid="stExpander"] summary p {{font-size: 0.78rem; color: var(--pbm-primary-dark);}}
