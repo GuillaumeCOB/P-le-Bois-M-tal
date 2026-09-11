@@ -1,8 +1,8 @@
 """
 Stockage Supabase de l'outil de gestion de projets.
 
-Modèle v2 :
-Projet -> Sous-projets / phases -> Tâches.
+Modèle v3 :
+Projet (statut + structure) -> Sous-projets / types -> Tâches.
 Les données restent stockées dans une seule ligne JSON afin de rester
 compatibles avec le déploiement actuel. Une migration automatique transforme
 les anciens projets/sous-tâches au premier chargement.
@@ -17,7 +17,7 @@ import streamlit as st
 from supabase import create_client, Client
 
 BOARD_ID = 1
-MODEL_VERSION = 2
+MODEL_VERSION = 3
 
 DEFAULT_STATUSES = [
     "Devis à faire",
@@ -128,6 +128,13 @@ def _normalise_subproject(subproject: dict, fallback_status: str):
     if "name" in subproject and not subproject.get("phase"):
         subproject["phase"] = subproject.get("name") or "Phase"
         changed = True
+    # Depuis le modèle v3, Phase et Type sont un seul et même champ visuel.
+    if not subproject.get("type") and subproject.get("phase"):
+        subproject["type"] = subproject.get("phase")
+        changed = True
+    if subproject.get("type") and subproject.get("phase") != subproject.get("type"):
+        subproject["phase"] = subproject.get("type")
+        changed = True
     for task in subproject.get("tasks", []):
         changed |= _normalise_task(
             task,
@@ -222,6 +229,19 @@ def _migrate_project(project: dict, statuses: list[str]):
 
     for subproject in project.get("subprojects", []):
         changed |= _normalise_subproject(subproject, fallback_status)
+
+    # Depuis le modèle v3, le statut appartient uniquement au projet.
+    if not project.get("status"):
+        first_child_status = next(
+            (
+                sp.get("status")
+                for sp in project.get("subprojects", [])
+                if sp.get("status") in statuses
+            ),
+            None,
+        )
+        project["status"] = first_child_status or fallback_status
+        changed = True
 
     return changed
 
@@ -329,6 +349,9 @@ def remove_status(path: str, name: str, fallback_status: str):
             data["statuses"].remove(name)
         data["status_colors"].pop(name, None)
         for project in data["projects"]:
+            if project.get("status") == name:
+                project["status"] = fallback_status
+            # Anciens champs conservés pour compatibilité avec les données v2.
             for subproject in project.get("subprojects", []):
                 if subproject.get("status") == name:
                     subproject["status"] = fallback_status
@@ -393,6 +416,7 @@ def new_project_dict(
     project_number=None,
     client: str = "",
     discipline: str = "Bois / Métal",
+    status: str = "Devis à faire",
     remarks: str = "",
 ):
     return {
@@ -401,6 +425,7 @@ def new_project_dict(
         "name": name,
         "client": client,
         "discipline": discipline,
+        "status": status,
         "remarks": remarks,
         "subprojects": [],
         "invoice_ready": False,
