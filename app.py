@@ -42,6 +42,58 @@ TOTAL_WIDTHS = [0.38, 0.78, 2.85, 0.95, 1.55, 1.15, 1.0, 0.95, 0.95, 0.72]
 
 _HAS_CONTAINER_KEY = "key" in inspect.signature(st.container).parameters
 
+# Petit cache réseau : évite une requête Supabase à chaque clic purement visuel.
+# Les écritures invalident immédiatement ce cache.
+DATA_CACHE_TTL_SECONDS = 5
+
+
+@st.cache_data(ttl=DATA_CACHE_TTL_SECONDS, show_spinner=False)
+def load_data_cached() -> dict:
+    return db.load_data(PATH)
+
+
+def invalidate_data_cache():
+    load_data_cached.clear()
+
+
+def _force_refresh():
+    invalidate_data_cache()
+
+
+def _toggle_session_flag(key: str):
+    st.session_state[key] = not st.session_state.get(key, False)
+
+
+def _run_db_action(action_name: str, *args):
+    """Exécute une écriture Supabase dans un callback, puis invalide le cache.
+
+    Le callback est exécuté avant le rerun normal déclenché par Streamlit :
+    on évite ainsi un deuxième st.rerun() pour les actions simples.
+    """
+    action = getattr(db, action_name)
+    action(PATH, *args)
+    invalidate_data_cache()
+
+
+def _set_subtask_done(project_id: str, subtask_id: str, state_key: str):
+    _run_db_action(
+        "update_subtask",
+        project_id,
+        subtask_id,
+        {"done": bool(st.session_state.get(state_key, False))},
+    )
+
+
+def _change_calendar_month(delta: int):
+    month = st.session_state.cal_month + delta
+    year = st.session_state.cal_year
+    if month == 0:
+        month, year = 12, year - 1
+    elif month == 13:
+        month, year = 1, year + 1
+    st.session_state.cal_month = month
+    st.session_state.cal_year = year
+
 
 def safe_color(value: str, fallback: str = PRIMARY) -> str:
     return value if isinstance(value, str) and re.fullmatch(r"#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?", value) else fallback
@@ -111,7 +163,7 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-text);
     }}
     .block-container {{
-        padding-top: 3rem;
+        padding-top: 5rem;
         padding-bottom: 1.25rem;
         padding-left: 1.25rem;
         padding-right: 1.25rem;
@@ -691,7 +743,7 @@ def project_search_blob(project: dict) -> str:
 
 
 try:
-    data = db.load_data(PATH)
+    data = load_data_cached()
 except Exception as e:
     st.error(
         "Impossible de se connecter à la base de données partagée. "
@@ -723,8 +775,11 @@ def render_header():
             )
         with c3:
             st.write("")
-            if st.button("🔄 Rafraîchir", use_container_width=True):
-                st.rerun()
+            st.button(
+                "🔄 Rafraîchir",
+                use_container_width=True,
+                on_click=_force_refresh,
+            )
 
 
 render_header()
@@ -793,9 +848,11 @@ def edit_project_dialog(p: dict):
             "budget": budget,
             "remarks": remarks,
         })
+        invalidate_data_cache()
         st.rerun()
     if delete:
         db.delete_project(PATH, p["id"])
+        invalidate_data_cache()
         st.rerun()
 
 
@@ -881,19 +938,31 @@ def render_subtasks(p: dict):
         for i, s in enumerate(subtasks):
             with ui_container(f"pbm_subrow_{s['id']}", "subrow"):
                 sc = st.columns([0.34, 0.34, 0.38, 3.90, 1.55, 1.15, 1.00, 0.95, 0.38], gap="small", vertical_alignment="center")
-                if sc[0].button("▴", key=f"subup_{s['id']}", disabled=(i == 0), help="Monter"):
-                    db.move_subtask(PATH, pid, s["id"], -1)
-                    st.rerun()
-                if sc[1].button("▾", key=f"subdown_{s['id']}", disabled=(i == len(subtasks) - 1), help="Descendre"):
-                    db.move_subtask(PATH, pid, s["id"], 1)
-                    st.rerun()
-                done = sc[2].checkbox(
-                    f"Terminer : {s['name']}", value=s.get("done", False),
-                    key=f"subdone_{s['id']}", label_visibility="collapsed",
+                sc[0].button(
+                    "▴",
+                    key=f"subup_{s['id']}",
+                    disabled=(i == 0),
+                    help="Monter",
+                    on_click=_run_db_action,
+                    args=("move_subtask", pid, s["id"], -1),
                 )
-                if done != s.get("done", False):
-                    db.update_subtask(PATH, pid, s["id"], {"done": done})
-                    st.rerun()
+                sc[1].button(
+                    "▾",
+                    key=f"subdown_{s['id']}",
+                    disabled=(i == len(subtasks) - 1),
+                    help="Descendre",
+                    on_click=_run_db_action,
+                    args=("move_subtask", pid, s["id"], 1),
+                )
+                done_key = f"subdone_{s['id']}"
+                sc[2].checkbox(
+                    f"Terminer : {s['name']}",
+                    value=s.get("done", False),
+                    key=done_key,
+                    label_visibility="collapsed",
+                    on_change=_set_subtask_done,
+                    args=(pid, s["id"], done_key),
+                )
                 with sc[3]:
                     cell(s["name"], "done" if s.get("done") else "")
                 with sc[4]:
@@ -904,17 +973,24 @@ def render_subtasks(p: dict):
                     cell("")
                 with sc[7]:
                     cell(display_hours(s.get("estimated_time")), "number")
-                if sc[8].button("×", key=f"subdel_{s['id']}", help="Supprimer la sous-tâche"):
-                    db.delete_subtask(PATH, pid, s["id"])
-                    st.rerun()
+                sc[8].button(
+                    "×",
+                    key=f"subdel_{s['id']}",
+                    help="Supprimer la sous-tâche",
+                    on_click=_run_db_action,
+                    args=("delete_subtask", pid, s["id"]),
+                )
 
         add_key = f"show_add_subtask_{pid}"
         if add_key not in st.session_state:
             st.session_state[add_key] = False
         add_label = "Masquer le formulaire" if st.session_state[add_key] else "Ajouter une sous-tâche"
-        if st.button(add_label, key=f"toggle_add_subtask_{pid}"):
-            st.session_state[add_key] = not st.session_state[add_key]
-            st.rerun()
+        st.button(
+            add_label,
+            key=f"toggle_add_subtask_{pid}",
+            on_click=_toggle_session_flag,
+            args=(add_key,),
+        )
         if st.session_state[add_key]:
             with st.form(f"add_subtask_{pid}", clear_on_submit=True):
                 fc1, fc2, fc3, fc4 = st.columns([3.1, 2, 1.2, 1])
@@ -932,6 +1008,7 @@ def render_subtasks(p: dict):
                 )
                 if fc4.form_submit_button("Ajouter") and sub_name.strip():
                     db.add_subtask(PATH, pid, sub_name, sub_assigned, sub_time)
+                    invalidate_data_cache()
                     st.rerun()
 
 
@@ -945,9 +1022,13 @@ def render_project_row(p: dict):
         with ui_container(f"pbm_row_{pid}", ["row", f"rowclr-{pid}"]):
             cols = st.columns(ROW_WIDTHS, gap="small", vertical_alignment="center")
             arrow = "▾" if st.session_state[expand_key] else "▸"
-            if cols[0].button(arrow, key=f"arrow_{pid}", help="Afficher / masquer les sous-tâches"):
-                st.session_state[expand_key] = not st.session_state[expand_key]
-                st.rerun()
+            cols[0].button(
+                arrow,
+                key=f"arrow_{pid}",
+                help="Afficher / masquer les sous-tâches",
+                on_click=_toggle_session_flag,
+                args=(expand_key,),
+            )
             with cols[1]:
                 project_number_cell(p)
             if cols[2].button(p["name"], key=f"name_{pid}", use_container_width=True, help=p["name"]):
@@ -1092,6 +1173,7 @@ if active_page == "Nouveau projet":
                     )
                     project["project_number"] = project_number.strip() or None
                     db.add_project(PATH, project)
+                    invalidate_data_cache()
                     st.success(f"Projet « {name} » créé.")
                     st.rerun()
 
@@ -1104,24 +1186,20 @@ if active_page == "Calendrier":
         st.session_state.cal_year = today.year
 
     nav1, nav2, nav3 = st.columns([1, 2, 1])
-    if nav1.button("◀ Mois précédent"):
-        m = st.session_state.cal_month - 1
-        y = st.session_state.cal_year
-        if m == 0:
-            m, y = 12, y - 1
-        st.session_state.cal_month, st.session_state.cal_year = m, y
-        st.rerun()
+    nav1.button(
+        "◀ Mois précédent",
+        on_click=_change_calendar_month,
+        args=(-1,),
+    )
     nav2.markdown(
         f"<h4 style='text-align:center; color:{PRIMARY_DARK}'>{cal.month_name[st.session_state.cal_month]} {st.session_state.cal_year}</h4>",
         unsafe_allow_html=True,
     )
-    if nav3.button("Mois suivant ▶"):
-        m = st.session_state.cal_month + 1
-        y = st.session_state.cal_year
-        if m == 13:
-            m, y = 1, y + 1
-        st.session_state.cal_month, st.session_state.cal_year = m, y
-        st.rerun()
+    nav3.button(
+        "Mois suivant ▶",
+        on_click=_change_calendar_month,
+        args=(1,),
+    )
 
     by_day = {}
     for p in data["projects"]:
@@ -1201,13 +1279,17 @@ if active_page == "Paramètres":
         for person in data["collaborators"]:
             c1, c2 = st.columns([4, 1])
             c1.write(person)
-            if c2.button("🗑️", key=f"del_collab_{person}"):
-                db.remove_collaborator(PATH, person)
-                st.rerun()
+            c2.button(
+                "🗑️",
+                key=f"del_collab_{person}",
+                on_click=_run_db_action,
+                args=("remove_collaborator", person),
+            )
         with st.form("add_collab_form", clear_on_submit=True):
             new_person = st.text_input("Ajouter une personne")
             if st.form_submit_button("Ajouter") and new_person.strip():
                 db.add_collaborator(PATH, new_person)
+                invalidate_data_cache()
                 st.rerun()
     with settings_cols[1]:
         st.markdown("### 🏷️ Statuts / groupes")
@@ -1219,21 +1301,33 @@ if active_page == "Paramètres":
                 badge(status, data["status_colors"].get(status, PRIMARY), PRIMARY_DARK),
                 unsafe_allow_html=True,
             )
-            if c2.button("▲", key=f"statusup_{status}", disabled=(i == 0)):
-                db.move_status(PATH, status, -1)
-                st.rerun()
-            if c3.button("▼", key=f"statusdown_{status}", disabled=(i == n_statuses - 1)):
-                db.move_status(PATH, status, 1)
-                st.rerun()
-            if c4.button("🗑️", key=f"del_status_{status}"):
-                fallback = next((s for s in data["statuses"] if s != status), "En cours")
-                db.remove_status(PATH, status, fallback)
-                st.rerun()
+            c2.button(
+                "▲",
+                key=f"statusup_{status}",
+                disabled=(i == 0),
+                on_click=_run_db_action,
+                args=("move_status", status, -1),
+            )
+            c3.button(
+                "▼",
+                key=f"statusdown_{status}",
+                disabled=(i == n_statuses - 1),
+                on_click=_run_db_action,
+                args=("move_status", status, 1),
+            )
+            fallback = next((s for s in data["statuses"] if s != status), "En cours")
+            c4.button(
+                "🗑️",
+                key=f"del_status_{status}",
+                on_click=_run_db_action,
+                args=("remove_status", status, fallback),
+            )
         with st.form("add_status_form", clear_on_submit=True):
             new_status = st.text_input("Nouveau statut / groupe")
             new_color = st.color_picker("Couleur", value=PRIMARY)
             if st.form_submit_button("Ajouter") and new_status.strip():
                 db.add_status(PATH, new_status, new_color)
+                invalidate_data_cache()
                 st.rerun()
     with settings_cols[2]:
         st.markdown("### 🏗️ Types de projet")
@@ -1245,15 +1339,26 @@ if active_page == "Paramètres":
                 badge(t, data["type_colors"].get(t, PRIMARY_DARK), PRIMARY_DARK),
                 unsafe_allow_html=True,
             )
-            if c2.button("▲", key=f"typeup_{t}", disabled=(i == 0)):
-                db.move_type(PATH, t, -1)
-                st.rerun()
-            if c3.button("▼", key=f"typedown_{t}", disabled=(i == n_types - 1)):
-                db.move_type(PATH, t, 1)
-                st.rerun()
-            if c4.button("🗑️", key=f"del_type_{t}"):
-                db.remove_type(PATH, t)
-                st.rerun()
+            c2.button(
+                "▲",
+                key=f"typeup_{t}",
+                disabled=(i == 0),
+                on_click=_run_db_action,
+                args=("move_type", t, -1),
+            )
+            c3.button(
+                "▼",
+                key=f"typedown_{t}",
+                disabled=(i == n_types - 1),
+                on_click=_run_db_action,
+                args=("move_type", t, 1),
+            )
+            c4.button(
+                "🗑️",
+                key=f"del_type_{t}",
+                on_click=_run_db_action,
+                args=("remove_type", t),
+            )
         with st.form("add_type_form", clear_on_submit=True):
             new_type = st.text_input("Nouveau type")
             new_type_color = st.color_picker("Couleur", value="#D6E6F5")
