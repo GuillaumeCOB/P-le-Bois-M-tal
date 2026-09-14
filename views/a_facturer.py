@@ -210,12 +210,27 @@ def _invoice_cell(col, value, *, bold=False, align="left", detail_depth=0, muted
     )
 
 
+def _invoice_blocks(entries: list[dict]) -> list[dict]:
+    """Regroupe chaque ligne facturée avec ses éventuelles lignes de détail."""
+    blocks = []
+    current = None
+    for entry in entries:
+        if not entry.get("_is_detail"):
+            current = {"parent": entry, "details": []}
+            blocks.append(current)
+        elif current is not None:
+            current["details"].append(entry)
+    return blocks
+
+
 def _render_invoice_table(entries: list[dict], month_key: str):
-    widths = [0.94, 0.72, 1.65, 1.35, 1.05, 2.10, 0.92, 1.30, 0.62]
+    # 1re colonne = flèche d'ouverture du détail ; dernière colonne = annulation.
+    widths = [0.38, 0.94, 0.72, 1.65, 1.35, 1.05, 2.10, 0.92, 1.30, 0.62]
 
     with ui_container(f"invoice_header_{month_key}", "invoiceheader"):
         header = st.columns(widths, gap="small", vertical_alignment="center")
         labels = [
+            "",
             "Niveau",
             "N°",
             "Projet",
@@ -232,61 +247,53 @@ def _render_invoice_table(entries: list[dict], month_key: str):
                     col,
                     label,
                     bold=True,
-                    align="right" if index == 6 else "left",
+                    align="right" if index == 7 else "left",
                 )
 
-    for index, entry in enumerate(entries):
-        is_detail = bool(entry.get("_is_detail"))
-        detail_depth = int(entry.get("_detail_depth", 0) or 0)
-        row_kind = "invoicedetailrow" if is_detail else "invoicerow"
+    for block_index, block in enumerate(_invoice_blocks(entries)):
+        entry = block["parent"]
+        details = block["details"]
+        entity_token = entry.get("_entity_id") or "project"
+        expand_key = (
+            f"invoice_detail_open_{month_key}_{entry['_level']}_"
+            f"{entry['_project_id']}_{entity_token}_{block_index}"
+        )
+        if expand_key not in st.session_state:
+            st.session_state[expand_key] = False
 
         with ui_container(
-            f"invoice_row_{month_key}_{index}_{entry.get('_level') or 'detail'}_{entry['_project_id']}",
-            row_kind,
+            f"invoice_row_{month_key}_{block_index}_{entry['_level']}_{entry['_project_id']}",
+            "invoicerow",
         ):
             cols = st.columns(widths, gap="small", vertical_alignment="center")
 
-            if is_detail:
-                _invoice_cell(
-                    cols[0],
-                    "↳ " + entry["Niveau"],
-                    muted=True,
-                    detail_depth=max(detail_depth - 1, 0),
-                )
-                _invoice_cell(cols[1], "", muted=True)
-                _invoice_cell(cols[2], "", muted=True)
-                _invoice_cell(cols[3], "", muted=True)
-                _invoice_cell(cols[4], "", muted=True)
-                _invoice_cell(
-                    cols[5],
-                    entry["Élément"],
-                    muted=True,
-                    detail_depth=detail_depth,
-                )
-                _invoice_cell(
-                    cols[6],
-                    display_amount(entry["Montant"]),
-                    align="right",
-                    muted=True,
-                )
-                _invoice_cell(cols[7], "Inclus", muted=True)
-                _invoice_cell(cols[8], "", muted=True)
-                continue
+            if details:
+                arrow = "▾" if st.session_state[expand_key] else "▸"
+                if cols[0].button(
+                    arrow,
+                    key=f"toggle_{expand_key}",
+                    help="Afficher / masquer le détail inclus",
+                    use_container_width=True,
+                ):
+                    st.session_state[expand_key] = not st.session_state[expand_key]
+                    st.rerun()
+            else:
+                _invoice_cell(cols[0], "", align="center")
 
-            _invoice_cell(cols[0], entry["Niveau"], bold=True)
-            _invoice_cell(cols[1], entry["N°"])
-            _invoice_cell(cols[2], entry["Projet"])
-            _invoice_cell(cols[3], entry["Client"])
-            _invoice_cell(cols[4], entry["Structure"])
-            _invoice_cell(cols[5], entry["Élément"])
-            _invoice_cell(cols[6], display_amount(entry["Montant"]), align="right", bold=True)
-            _invoice_cell(cols[7], entry["Date"].strftime("%d/%m/%Y %H:%M"))
+            _invoice_cell(cols[1], entry["Niveau"], bold=True)
+            _invoice_cell(cols[2], entry["N°"])
+            _invoice_cell(cols[3], entry["Projet"])
+            _invoice_cell(cols[4], entry["Client"])
+            _invoice_cell(cols[5], entry["Structure"])
+            _invoice_cell(cols[6], entry["Élément"])
+            _invoice_cell(cols[7], display_amount(entry["Montant"]), align="right", bold=True)
+            _invoice_cell(cols[8], entry["Date"].strftime("%d/%m/%Y %H:%M"))
 
-            if cols[8].button(
+            if cols[9].button(
                 "↩",
                 key=(
                     f"cancel_invoice_{month_key}_{entry['_level']}_"
-                    f"{entry['_project_id']}_{entry['_entity_id'] or 'project'}_{index}"
+                    f"{entry['_project_id']}_{entity_token}_{block_index}"
                 ),
                 help="Annuler la mise à facturer et remettre l'élément dans le Tableau.",
                 use_container_width=True,
@@ -294,6 +301,41 @@ def _render_invoice_table(entries: list[dict], month_key: str):
                 _cancel_invoice(entry)
                 st.rerun()
 
+        if not details or not st.session_state[expand_key]:
+            continue
+
+        for detail_index, detail in enumerate(details):
+            detail_depth = int(detail.get("_detail_depth", 0) or 0)
+            with ui_container(
+                f"invoice_detail_{month_key}_{block_index}_{detail_index}_{entry['_project_id']}",
+                "invoicedetailrow",
+            ):
+                cols = st.columns(widths, gap="small", vertical_alignment="center")
+                _invoice_cell(cols[0], "", muted=True)
+                _invoice_cell(
+                    cols[1],
+                    "↳ " + detail["Niveau"],
+                    muted=True,
+                    detail_depth=max(detail_depth - 1, 0),
+                )
+                _invoice_cell(cols[2], "", muted=True)
+                _invoice_cell(cols[3], "", muted=True)
+                _invoice_cell(cols[4], "", muted=True)
+                _invoice_cell(cols[5], "", muted=True)
+                _invoice_cell(
+                    cols[6],
+                    detail["Élément"],
+                    muted=True,
+                    detail_depth=detail_depth,
+                )
+                _invoice_cell(
+                    cols[7],
+                    display_amount(detail["Montant"]),
+                    align="right",
+                    muted=True,
+                )
+                _invoice_cell(cols[8], "Inclus", muted=True)
+                _invoice_cell(cols[9], "", muted=True)
 
 def render_a_facturer(data: dict):
     invoice_header = css_scope("invoiceheader")
