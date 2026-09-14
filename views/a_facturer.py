@@ -1,4 +1,5 @@
 from datetime import datetime
+from html import escape
 
 import streamlit as st
 
@@ -37,7 +38,27 @@ def _month_label(key: str) -> str:
     return f"{MOIS_FR[int(month)]} {year}"
 
 
+def _detail_entry(base: dict, *, level: str, element: str, amount: float, date: datetime, depth: int) -> dict:
+    return {
+        **base,
+        "Niveau": level,
+        "Élément": element,
+        "Montant": float(amount or 0),
+        "Date": date,
+        "_level": None,
+        "_entity_id": None,
+        "_is_detail": True,
+        "_detail_depth": depth,
+    }
+
+
 def _invoice_entries(data: dict) -> list[dict]:
+    """Construit les lignes facturées + les lignes de détail informatives.
+
+    Les lignes de détail ne sont jamais intégrées aux totaux et n'ont pas de bouton
+    d'annulation. Elles servent uniquement à expliquer ce qui est inclus dans un
+    projet ou un sous-projet mis à facturer.
+    """
     entries = []
 
     for project in data.get("projects", []):
@@ -61,27 +82,76 @@ def _invoice_entries(data: dict) -> list[dict]:
                         "Date": marked_at,
                         "_level": "project",
                         "_entity_id": None,
+                        "_is_detail": False,
+                        "_detail_depth": 0,
                     }
                 )
+
+                # Projet complet : afficher tous les sous-projets puis leurs tâches.
+                for subproject in project.get("subprojects", []):
+                    subproject_label = (
+                        subproject.get("type")
+                        or subproject.get("phase")
+                        or "Sous-projet"
+                    )
+                    entries.append(
+                        _detail_entry(
+                            base,
+                            level="Sous-projet inclus",
+                            element=subproject_label,
+                            amount=float(subproject.get("budget", 0) or 0),
+                            date=marked_at,
+                            depth=1,
+                        )
+                    )
+                    for task in subproject.get("tasks", []):
+                        entries.append(
+                            _detail_entry(
+                                base,
+                                level="Tâche incluse",
+                                element=task.get("name") or "Tâche",
+                                amount=float(task.get("budget", 0) or 0),
+                                date=marked_at,
+                                depth=2,
+                            )
+                        )
             continue
 
         for subproject in project.get("subprojects", []):
             if subproject.get("invoice_ready"):
                 marked_at = _parse_datetime(subproject.get("invoice_marked_at"))
                 if marked_at:
+                    subproject_label = (
+                        subproject.get("type")
+                        or subproject.get("phase")
+                        or "Sous-projet"
+                    )
                     entries.append(
                         {
                             **base,
                             "Niveau": "Sous-projet",
-                            "Élément": subproject.get("type")
-                            or subproject.get("phase")
-                            or "Sous-projet",
+                            "Élément": subproject_label,
                             "Montant": float(subproject.get("invoice_amount") or 0),
                             "Date": marked_at,
                             "_level": "subproject",
                             "_entity_id": subproject.get("id"),
+                            "_is_detail": False,
+                            "_detail_depth": 0,
                         }
                     )
+
+                    # Sous-projet complet : afficher ses tâches comme détail inclus.
+                    for task in subproject.get("tasks", []):
+                        entries.append(
+                            _detail_entry(
+                                base,
+                                level="Tâche incluse",
+                                element=task.get("name") or "Tâche",
+                                amount=float(task.get("budget", 0) or 0),
+                                date=marked_at,
+                                depth=1,
+                            )
+                        )
                 continue
 
             for task in subproject.get("tasks", []):
@@ -102,13 +172,19 @@ def _invoice_entries(data: dict) -> list[dict]:
                         "Date": marked_at,
                         "_level": "task",
                         "_entity_id": task.get("id"),
+                        "_is_detail": False,
+                        "_detail_depth": 0,
                     }
                 )
 
+    # Chaque bloc parent + détails reste groupé. Le tri par date suffit car les
+    # lignes d'un même bloc partagent exactement la même date de facturation.
     return sorted(entries, key=lambda item: item["Date"], reverse=True)
 
 
 def _cancel_invoice(entry: dict):
+    if entry.get("_is_detail"):
+        return
     run_db_action(
         "set_invoice_state",
         entry["_level"],
@@ -118,18 +194,24 @@ def _cancel_invoice(entry: dict):
     )
 
 
-def _invoice_cell(col, value, *, bold=False, align="left"):
-    text = str(value if value not in (None, "") else "—")
+def _invoice_cell(col, value, *, bold=False, align="left", detail_depth=0, muted=False):
+    text = escape(str(value if value not in (None, "") else "—"))
     weight = "700" if bold else "400"
-    justify = {"left": "flex-start", "center": "center", "right": "flex-end"}.get(align, "flex-start")
+    justify = {"left": "flex-start", "center": "center", "right": "flex-end"}.get(
+        align, "flex-start"
+    )
+    padding_left = 0.18 + (0.70 * detail_depth)
+    color = "#7A7F9F" if muted else "#1F2340"
     col.markdown(
-        f'<div class="pbm-invoice-cell" style="justify-content:{justify};font-weight:{weight};">{text}</div>',
+        f'<div class="pbm-invoice-cell" '
+        f'style="justify-content:{justify};font-weight:{weight};'
+        f'padding-left:{padding_left:.2f}rem;color:{color};">{text}</div>',
         unsafe_allow_html=True,
     )
 
 
 def _render_invoice_table(entries: list[dict], month_key: str):
-    widths = [0.82, 0.72, 1.65, 1.35, 1.05, 2.10, 0.92, 1.30, 0.62]
+    widths = [0.94, 0.72, 1.65, 1.35, 1.05, 2.10, 0.92, 1.30, 0.62]
 
     with ui_container(f"invoice_header_{month_key}", "invoiceheader"):
         header = st.columns(widths, gap="small", vertical_alignment="center")
@@ -154,18 +236,50 @@ def _render_invoice_table(entries: list[dict], month_key: str):
                 )
 
     for index, entry in enumerate(entries):
+        is_detail = bool(entry.get("_is_detail"))
+        detail_depth = int(entry.get("_detail_depth", 0) or 0)
+        row_kind = "invoicedetailrow" if is_detail else "invoicerow"
+
         with ui_container(
-            f"invoice_row_{month_key}_{index}_{entry['_level']}_{entry['_project_id']}",
-            "invoicerow",
+            f"invoice_row_{month_key}_{index}_{entry.get('_level') or 'detail'}_{entry['_project_id']}",
+            row_kind,
         ):
             cols = st.columns(widths, gap="small", vertical_alignment="center")
-            _invoice_cell(cols[0], entry["Niveau"])
+
+            if is_detail:
+                _invoice_cell(
+                    cols[0],
+                    "↳ " + entry["Niveau"],
+                    muted=True,
+                    detail_depth=max(detail_depth - 1, 0),
+                )
+                _invoice_cell(cols[1], "", muted=True)
+                _invoice_cell(cols[2], "", muted=True)
+                _invoice_cell(cols[3], "", muted=True)
+                _invoice_cell(cols[4], "", muted=True)
+                _invoice_cell(
+                    cols[5],
+                    entry["Élément"],
+                    muted=True,
+                    detail_depth=detail_depth,
+                )
+                _invoice_cell(
+                    cols[6],
+                    display_amount(entry["Montant"]),
+                    align="right",
+                    muted=True,
+                )
+                _invoice_cell(cols[7], "Inclus", muted=True)
+                _invoice_cell(cols[8], "", muted=True)
+                continue
+
+            _invoice_cell(cols[0], entry["Niveau"], bold=True)
             _invoice_cell(cols[1], entry["N°"])
             _invoice_cell(cols[2], entry["Projet"])
             _invoice_cell(cols[3], entry["Client"])
             _invoice_cell(cols[4], entry["Structure"])
             _invoice_cell(cols[5], entry["Élément"])
-            _invoice_cell(cols[6], display_amount(entry["Montant"]), align="right")
+            _invoice_cell(cols[6], display_amount(entry["Montant"]), align="right", bold=True)
             _invoice_cell(cols[7], entry["Date"].strftime("%d/%m/%Y %H:%M"))
 
             if cols[8].button(
@@ -184,6 +298,7 @@ def _render_invoice_table(entries: list[dict], month_key: str):
 def render_a_facturer(data: dict):
     invoice_header = css_scope("invoiceheader")
     invoice_row = css_scope("invoicerow")
+    invoice_detail_row = css_scope("invoicedetailrow")
     st.markdown(
         f"""
         <style>
@@ -218,14 +333,23 @@ def render_a_facturer(data: dict):
             letter-spacing: 0.03em;
             color: #70759A;
         }}
-        {invoice_row} {{
+        {invoice_row},
+        {invoice_detail_row} {{
             min-height: 28px !important;
             padding: 0.02rem 0.12rem !important;
             margin: 0 !important;
-            border-bottom: 1px solid rgba(64,51,140,0.07);
             gap: 0 !important;
         }}
-        {invoice_row} [data-testid="stHorizontalBlock"] {{
+        {invoice_row} {{
+            border-bottom: 1px solid rgba(64,51,140,0.09);
+            background: rgba(255,255,255,0.70);
+        }}
+        {invoice_detail_row} {{
+            border-bottom: 1px solid rgba(64,51,140,0.035);
+            background: rgba(64,51,140,0.018);
+        }}
+        {invoice_row} [data-testid="stHorizontalBlock"],
+        {invoice_detail_row} [data-testid="stHorizontalBlock"] {{
             min-height: 28px !important;
             align-items: center !important;
             gap: 6px !important;
@@ -233,9 +357,14 @@ def render_a_facturer(data: dict):
             padding: 0 !important;
         }}
         {invoice_row} :is(.element-container, [data-testid="stElementContainer"]),
+        {invoice_detail_row} :is(.element-container, [data-testid="stElementContainer"]),
         {invoice_header} :is(.element-container, [data-testid="stElementContainer"]) {{
             margin: 0 !important;
             padding: 0 !important;
+        }}
+        {invoice_detail_row} .pbm-invoice-cell {{
+            min-height: 23px;
+            font-size: 0.73rem;
         }}
         {invoice_row} [data-testid="stButton"] button {{
             min-height: 24px !important;
@@ -292,17 +421,19 @@ def render_a_facturer(data: dict):
         st.info("Aucun élément ne correspond aux filtres.")
         return
 
-    total = sum(entry["Montant"] for entry in filtered)
+    billable_filtered = [entry for entry in filtered if not entry.get("_is_detail")]
+    total = sum(entry["Montant"] for entry in billable_filtered)
     st.markdown(
-        f"**{len(filtered)} élément{'s' if len(filtered) != 1 else ''} · {display_amount(total)}**"
+        f"**{len(billable_filtered)} élément{'s' if len(billable_filtered) != 1 else ''} · {display_amount(total)}**"
     )
 
     grouped_months = sorted({entry["Mois"] for entry in filtered}, reverse=True)
     for month_key in grouped_months:
         month_entries = [entry for entry in filtered if entry["Mois"] == month_key]
-        month_total = sum(entry["Montant"] for entry in month_entries)
+        month_billable = [entry for entry in month_entries if not entry.get("_is_detail")]
+        month_total = sum(entry["Montant"] for entry in month_billable)
         with st.expander(
-            f"{_month_label(month_key)} · {len(month_entries)} élément{'s' if len(month_entries) != 1 else ''} · {display_amount(month_total)}",
+            f"{_month_label(month_key)} · {len(month_billable)} élément{'s' if len(month_billable) != 1 else ''} · {display_amount(month_total)}",
             expanded=True,
         ):
             _render_invoice_table(month_entries, month_key)
