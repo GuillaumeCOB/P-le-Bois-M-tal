@@ -590,7 +590,7 @@ def inject_brand_styles(data: dict):
         font-weight: 800;
         letter-spacing: 0.055em;
         text-transform: uppercase;
-        margin: 0.15rem 0 0.26rem 0.08rem;
+        margin: 0.15rem 0 0.40rem 0.08rem;
     }}
     {summary} .pbm-summary-section.second {{margin-top: 0.75rem;}}
     {summary} [data-testid="stButton"] button {{
