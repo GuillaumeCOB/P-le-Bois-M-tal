@@ -28,6 +28,9 @@ def inject_brand_styles(data: dict):
     summary = css_scope("summary")
     addtasktoggle = css_scope("addtasktoggle")
     addsubtoggle = css_scope("addsubtoggle")
+    urgentfilter = css_scope("urgentfilter")
+    urgentfilteractive = css_scope("urgentfilteractive")
+    urgentproject = css_scope("urgentproject")
 
     css = f"""
     :root {{
@@ -161,6 +164,33 @@ def inject_brand_styles(data: dict):
         margin: 0 !important;
         white-space: nowrap !important;
         font-size: 0.86rem !important;
+    }}
+
+    /* Filtre des projets arrivés à leur date de démarrage calculée. */
+    {urgentfilter} [data-testid="stButton"] button {{
+        min-height: 2.5rem !important;
+        height: 2.5rem !important;
+        padding: 0 0.75rem !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255,92,36,0.55) !important;
+        background: rgba(255,92,36,0.14) !important;
+        color: #9A3215 !important;
+        box-shadow: 0 2px 7px rgba(154,50,21,0.08) !important;
+        font-weight: 700 !important;
+    }}
+    {urgentfilter} [data-testid="stButton"] button:hover {{
+        background: rgba(255,92,36,0.21) !important;
+        border-color: rgba(255,92,36,0.72) !important;
+    }}
+    {urgentfilteractive} [data-testid="stButton"] button {{
+        background: #FF5C24 !important;
+        border-color: #FF5C24 !important;
+        color: #ffffff !important;
+    }}
+    {urgentfilter} [data-testid="stButton"] button p {{
+        margin: 0 !important;
+        white-space: nowrap !important;
+        font-size: 0.84rem !important;
     }}
 
     .pbm-badge {{
@@ -350,6 +380,13 @@ def inject_brand_styles(data: dict):
         min-height: 34px;
         background: rgba(255,255,255,0.82);
         box-shadow: inset 0 0 0 1px rgba(64,51,140,0.07);
+    }}
+    {urgentproject} {{
+        background: rgba(255,92,36,0.12) !important;
+        box-shadow: inset 0 0 0 1px rgba(255,92,36,0.24) !important;
+    }}
+    {urgentproject}:hover {{
+        background: rgba(255,92,36,0.18) !important;
     }}
     {subprojectrow} {{min-height: 30px;}}
     {taskrow} {{
