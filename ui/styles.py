@@ -268,7 +268,7 @@ def inject_brand_styles(data: dict):
     /* En-têtes des niveaux 2 et 3 : repères très légers, sans effet de carte. */
     {subprojects} .pbm-grid-header-wrap,
     {tasks} .pbm-grid-header-wrap {{
-        padding: 0.18rem 0 0.60rem;
+        padding: 0.18rem 0 0.9rem;
         margin: 0;
         position: relative;
         z-index: 1;
