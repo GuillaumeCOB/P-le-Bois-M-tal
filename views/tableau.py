@@ -1,4 +1,6 @@
-from datetime import date, datetime
+import math
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -46,6 +48,10 @@ def _set_summary_status(value):
     st.session_state["pbm_summary_status"] = value
 
 
+HOURS_PER_DAY = 8
+PARIS_TZ = ZoneInfo("Europe/Paris")
+
+
 def _parse_date(value):
     if not value:
         return None
@@ -53,6 +59,69 @@ def _parse_date(value):
         return datetime.strptime(str(value), "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def _item_start_date(item: dict):
+    """Date de démarrage calculée comme dans le calendrier : durée / 8 h, jours ouvrés uniquement."""
+    due = _parse_date(item.get("due_date"))
+    if due is None:
+        return None
+
+    try:
+        hours = float(item.get("estimated_time", 0) or 0)
+    except (TypeError, ValueError):
+        hours = 0
+
+    duration_days = max(1, math.ceil(hours / HOURS_PER_DAY))
+    current = due
+    workdays = []
+    while len(workdays) < duration_days:
+        if current.weekday() < 5:
+            workdays.append(current)
+        current -= timedelta(days=1)
+
+    return min(workdays) if workdays else due
+
+
+def _project_planning_items(project: dict):
+    """Même logique que le calendrier : tâches si elles existent, sinon sous-projet."""
+    items = []
+    for subproject in project.get("subprojects", []):
+        if subproject.get("invoice_ready"):
+            continue
+
+        all_tasks = subproject.get("tasks", [])
+        if all_tasks:
+            items.extend(
+                task
+                for task in all_tasks
+                if not task.get("invoice_ready")
+            )
+        else:
+            items.append(subproject)
+    return items
+
+
+def project_start_date(project: dict):
+    starts = [
+        start
+        for item in _project_planning_items(project)
+        if (start := _item_start_date(item)) is not None
+    ]
+    return min(starts) if starts else None
+
+
+def project_is_urgent(project: dict, today: date | None = None) -> bool:
+    """Vrai dès que la date de démarrage calculée du projet est atteinte."""
+    if str(project.get("status") or "").strip().casefold() == "terminé".casefold():
+        return False
+
+    start = project_start_date(project)
+    if start is None:
+        return False
+
+    current_day = today or datetime.now(PARIS_TZ).date()
+    return start <= current_day
 
 
 def _project_matches_collaborator(project: dict, collaborator: str | None) -> bool:
@@ -105,6 +174,7 @@ def get_filtered_projects(
     type_filter: str | None = None,
     discipline_filter: str | None = None,
     status_filter: str | None = None,
+    urgent_only: bool = False,
 ) -> list[dict]:
     """Retourne les projets correspondant aux filtres actuellement utilisés par le Tableau."""
     normalized_query = str(query or "").strip().casefold()
@@ -119,6 +189,7 @@ def get_filtered_projects(
             discipline_filter is None
             or project.get("discipline") == discipline_filter
         )
+        and (not urgent_only or project_is_urgent(project))
     ]
 
 
@@ -620,13 +691,17 @@ def render_project_row(project: dict, data: dict):
     discipline = project.get("discipline") or DISCIPLINES[0]
     status = project.get("status") or data["statuses"][0]
 
+    row_kinds = [
+        "projectrow",
+        f"discipline-row-{DISCIPLINES.index(discipline) if discipline in DISCIPLINES else 0}",
+    ]
+    if project_is_urgent(project):
+        row_kinds.append("urgentproject")
+
     with ui_container(f"pbm_project_{project_id}", "project"):
         with ui_container(
             f"pbm_projectrow_{project_id}",
-            [
-                "projectrow",
-                f"discipline-row-{DISCIPLINES.index(discipline) if discipline in DISCIPLINES else 0}",
-            ],
+            row_kinds,
         ):
             cols = st.columns(PROJECT_ROW_WIDTHS, gap="small", vertical_alignment="center")
             invoice_key = f"invoice_project_{project_id}"
@@ -709,18 +784,16 @@ def render_tableau(data: dict):
             discipline_filter = st.session_state.get("pbm_summary_discipline")
             status_filter = st.session_state.get("pbm_summary_status")
 
-            projects = [
-                project
-                for project in _active_projects(data)
-                if (not query or query in project_search_blob(project))
-                and _project_matches_collaborator(project, person_filter)
-                and _project_matches_type(project, type_filter)
-                and _project_matches_status(project, status_filter)
-                and (
-                    discipline_filter is None
-                    or project.get("discipline") == discipline_filter
-                )
-            ]
+            urgent_only = bool(st.session_state.get("pbm_urgent_only", False))
+            projects = get_filtered_projects(
+                data,
+                query=query,
+                person_filter=person_filter,
+                type_filter=type_filter,
+                discipline_filter=discipline_filter,
+                status_filter=status_filter,
+                urgent_only=urgent_only,
+            )
 
             if not _active_projects(data):
                 st.info("Aucun projet actif. Les projets mis à facturer sont visibles dans l'onglet À facturer.")

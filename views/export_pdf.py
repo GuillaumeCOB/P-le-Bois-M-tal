@@ -38,6 +38,7 @@ def current_tableau_filters() -> dict:
         "type_filter": st.session_state.get("pbm_type"),
         "discipline_filter": st.session_state.get("pbm_summary_discipline"),
         "status_filter": st.session_state.get("pbm_summary_status"),
+        "urgent_only": bool(st.session_state.get("pbm_urgent_only", False)),
     }
 
 
@@ -84,6 +85,8 @@ def _filter_summary(filters: dict) -> list[tuple[str, str]]:
         rows.append(("Structure", str(filters["discipline_filter"])))
     if filters.get("status_filter"):
         rows.append(("Statut", str(filters["status_filter"])))
+    if filters.get("urgent_only"):
+        rows.append(("Urgence", "À faire maintenant"))
     return rows
 
 
