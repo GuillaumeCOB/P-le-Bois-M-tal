@@ -55,7 +55,7 @@ def badge(text: str, color: str, text_color: str = "white") -> str:
     label = escape(str(text))
     border = hex_to_rgba(background, 0.18)
     return (
-        f'<span class="pbm-badge" title="{label}" '
+        f'<span class="pbm-badge" '
         f'style="background-color:{hex_to_rgba(background, 0.16)};'
         f'color:{foreground}; border-color:{border};">{label}</span>'
     )
@@ -63,9 +63,8 @@ def badge(text: str, color: str, text_color: str = "white") -> str:
 
 def cell(text, style: str = "", tooltip: str = ""):
     value = str(text) if text not in (None, "") else "—"
-    title = escape(tooltip or value, quote=True)
     st.markdown(
-        f'<div class="pbm-cell {style}" title="{title}">{escape(value)}</div>',
+        f'<div class="pbm-cell {style}">{escape(value)}</div>',
         unsafe_allow_html=True,
     )
 
