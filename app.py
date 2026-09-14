@@ -34,6 +34,12 @@ def _set_active_page(page_name: str):
     st.session_state["pbm_active_page"] = page_name
 
 
+def _toggle_urgent_filter():
+    st.session_state["pbm_urgent_only"] = not bool(
+        st.session_state.get("pbm_urgent_only", False)
+    )
+
+
 try:
     data = load_data_cached()
 except Exception as e:
@@ -50,10 +56,12 @@ render_header()
 
 if "pbm_active_page" not in st.session_state:
     st.session_state["pbm_active_page"] = "Tableau"
+if "pbm_urgent_only" not in st.session_state:
+    st.session_state["pbm_urgent_only"] = False
 
 with ui_container("pbm_main_navigation", "nav"):
     nav_cols = st.columns(
-        [1.0, 1.42, 1.05, 1.05, 0.85, 1.15, 3.30, 1.20],
+        [1.0, 1.42, 1.05, 1.05, 0.85, 1.15, 2.10, 1.05, 1.20],
         gap="small",
     )
     nav_items = ["Tableau", "Nouveau projet", "À facturer", "Calendrier", "Gantt", "Paramètres"]
@@ -69,9 +77,22 @@ with ui_container("pbm_main_navigation", "nav"):
             )
 
     if st.session_state["pbm_active_page"] == "Tableau":
+        urgent_active = bool(st.session_state.get("pbm_urgent_only", False))
+        with nav_cols[7]:
+            with ui_container(
+                "pbm_urgent_filter",
+                ["urgentfilter", "urgentfilteractive"] if urgent_active else "urgentfilter",
+            ):
+                st.button(
+                    "Urgents ✓" if urgent_active else "Urgents",
+                    key="toggle_urgent_filter",
+                    use_container_width=True,
+                    on_click=_toggle_urgent_filter,
+                )
+
         pdf_filters = current_tableau_filters()
         pdf_bytes = build_tableau_pdf(data, pdf_filters)
-        with nav_cols[7]:
+        with nav_cols[8]:
             st.download_button(
                 "Export PDF",
                 data=pdf_bytes,
