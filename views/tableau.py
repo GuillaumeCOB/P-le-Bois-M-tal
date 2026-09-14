@@ -393,12 +393,14 @@ def _render_add_task_form(project: dict, subproject: dict, data: dict):
     if key not in st.session_state:
         st.session_state[key] = False
 
-    st.button(
-        "Masquer le formulaire" if st.session_state[key] else "Ajouter une tâche",
-        key=f"toggle_add_task_{subproject['id']}",
-        on_click=toggle_session_flag,
-        args=(key,),
-    )
+    with ui_container(f"pbm_addtasktoggle_{subproject['id']}", "addtasktoggle"):
+        st.button(
+            "−" if st.session_state[key] else "+",
+            key=f"toggle_add_task_{subproject['id']}",
+            on_click=toggle_session_flag,
+            args=(key,),
+            help="Afficher / masquer le formulaire d'ajout de tâche",
+        )
 
     if not st.session_state[key]:
         return
@@ -483,12 +485,14 @@ def _render_add_subproject_form(project: dict, data: dict):
     if key not in st.session_state:
         st.session_state[key] = False
 
-    st.button(
-        "Masquer le formulaire" if st.session_state[key] else "Ajouter un sous-projet",
-        key=f"toggle_add_subproject_{project['id']}",
-        on_click=toggle_session_flag,
-        args=(key,),
-    )
+    with ui_container(f"pbm_addsubtoggle_{project['id']}", "addsubtoggle"):
+        st.button(
+            "−" if st.session_state[key] else "+",
+            key=f"toggle_add_subproject_{project['id']}",
+            on_click=toggle_session_flag,
+            args=(key,),
+            help="Afficher / masquer le formulaire d'ajout de sous-projet",
+        )
 
     if not st.session_state[key]:
         return
