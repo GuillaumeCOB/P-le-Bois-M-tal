@@ -1,9 +1,9 @@
 from datetime import datetime
 
-import pandas as pd
 import streamlit as st
 
 from config import DISCIPLINES
+from data_service import run_db_action
 from ui.components import display_amount
 
 MOIS_FR = [
@@ -46,6 +46,7 @@ def _invoice_entries(data: dict) -> list[dict]:
             "Projet": project.get("name") or "—",
             "Client": project.get("client") or "—",
             "Structure": project.get("discipline") or "—",
+            "_project_id": project.get("id"),
         }
 
         if project.get("invoice_ready"):
@@ -58,6 +59,8 @@ def _invoice_entries(data: dict) -> list[dict]:
                         "Élément": project.get("name") or "Projet",
                         "Montant": float(project.get("invoice_amount") or 0),
                         "Date": marked_at,
+                        "_level": "project",
+                        "_entity_id": None,
                     }
                 )
             continue
@@ -70,9 +73,13 @@ def _invoice_entries(data: dict) -> list[dict]:
                         {
                             **base,
                             "Niveau": "Sous-projet",
-                            "Élément": subproject.get("type") or subproject.get("phase") or "Sous-projet",
+                            "Élément": subproject.get("type")
+                            or subproject.get("phase")
+                            or "Sous-projet",
                             "Montant": float(subproject.get("invoice_amount") or 0),
                             "Date": marked_at,
+                            "_level": "subproject",
+                            "_entity_id": subproject.get("id"),
                         }
                     )
                 continue
@@ -87,17 +94,86 @@ def _invoice_entries(data: dict) -> list[dict]:
                     {
                         **base,
                         "Niveau": "Tâche",
-                        "Élément": f"{subproject.get('type') or subproject.get('phase') or 'Sous-projet'} · {task.get('name') or 'Tâche'}",
+                        "Élément": (
+                            f"{subproject.get('type') or subproject.get('phase') or 'Sous-projet'}"
+                            f" · {task.get('name') or 'Tâche'}"
+                        ),
                         "Montant": float(task.get("invoice_amount") or 0),
                         "Date": marked_at,
+                        "_level": "task",
+                        "_entity_id": task.get("id"),
                     }
                 )
 
     return sorted(entries, key=lambda item: item["Date"], reverse=True)
 
 
+def _cancel_invoice(entry: dict):
+    run_db_action(
+        "set_invoice_state",
+        entry["_level"],
+        entry["_project_id"],
+        entry["_entity_id"],
+        False,
+    )
+
+
+def _render_invoice_table(entries: list[dict], month_key: str):
+    widths = [0.82, 0.72, 1.65, 1.35, 1.05, 2.10, 0.92, 1.30, 0.62]
+
+    header = st.columns(widths, gap="small", vertical_alignment="center")
+    labels = [
+        "Niveau",
+        "N°",
+        "Projet",
+        "Client",
+        "Structure",
+        "Élément",
+        "Montant",
+        "Mise à facturer",
+        "",
+    ]
+    for col, label in zip(header, labels):
+        if label:
+            col.markdown(f"**{label}**")
+
+    st.divider()
+
+    for index, entry in enumerate(entries):
+        cols = st.columns(widths, gap="small", vertical_alignment="center")
+        cols[0].write(entry["Niveau"])
+        cols[1].write(entry["N°"])
+        cols[2].write(entry["Projet"])
+        cols[3].write(entry["Client"])
+        cols[4].write(entry["Structure"])
+        cols[5].write(entry["Élément"])
+        cols[6].write(display_amount(entry["Montant"]))
+        cols[7].write(entry["Date"].strftime("%d/%m/%Y %H:%M"))
+
+        if cols[8].button(
+            "↩",
+            key=(
+                f"cancel_invoice_{month_key}_{entry['_level']}_"
+                f"{entry['_project_id']}_{entry['_entity_id'] or 'project'}_{index}"
+            ),
+            help="Annuler la mise à facturer et remettre l'élément dans le Tableau.",
+            use_container_width=True,
+        ):
+            _cancel_invoice(entry)
+            st.rerun()
+
+        if index < len(entries) - 1:
+            st.markdown(
+                "<hr style='margin:0.18rem 0; border:0; border-top:1px solid rgba(64,51,140,0.07);'>",
+                unsafe_allow_html=True,
+            )
+
+
 def render_a_facturer(data: dict):
     st.subheader("À facturer")
+    st.caption(
+        "Le bouton ↩ permet d'annuler une mise à facturer. L'élément réapparaît alors dans le Tableau."
+    )
 
     entries = _invoice_entries(data)
     if not entries:
@@ -115,7 +191,9 @@ def render_a_facturer(data: dict):
     month_filter = filters[0].selectbox(
         "Mois de facturation",
         [None] + month_keys,
-        format_func=lambda value: "Tous les mois" if value is None else _month_label(value),
+        format_func=lambda value: "Tous les mois"
+        if value is None
+        else _month_label(value),
     )
     discipline_filter = filters[1].selectbox(
         "Structure",
@@ -147,22 +225,4 @@ def render_a_facturer(data: dict):
             f"{_month_label(month_key)} · {len(month_entries)} élément{'s' if len(month_entries) != 1 else ''} · {display_amount(month_total)}",
             expanded=True,
         ):
-            rows = []
-            for entry in month_entries:
-                rows.append(
-                    {
-                        "Niveau": entry["Niveau"],
-                        "N°": entry["N°"],
-                        "Projet": entry["Projet"],
-                        "Client": entry["Client"],
-                        "Structure": entry["Structure"],
-                        "Élément": entry["Élément"],
-                        "Montant": display_amount(entry["Montant"]),
-                        "Mise à facturer": entry["Date"].strftime("%d/%m/%Y %H:%M"),
-                    }
-                )
-            st.dataframe(
-                pd.DataFrame(rows),
-                use_container_width=True,
-                hide_index=True,
-            )
+            _render_invoice_table(month_entries, month_key)
