@@ -335,7 +335,7 @@ def inject_brand_styles(data: dict):
         gap: 0 !important;
     }}
 
-    {project} {{margin-bottom: 0.25rem;}}
+    {project} {{margin-bottom: 0rem;}}
 
     /* Hiérarchie compacte. On laisse Streamlit calculer la taille naturelle
        des éléments internes au lieu de leur imposer plusieurs hauteurs concurrentes. */
@@ -660,10 +660,12 @@ def inject_brand_styles(data: dict):
 
     for i, status in enumerate(data.get("statuses", [])):
         color = safe_color(data.get("status_colors", {}).get(status), PRIMARY)
+        group_scope = css_scope(f"status-group-{i}")
         side_scope = css_scope(f"summary-status-{i}")
         css += (
             f'[data-testid="stExpander"]:has(.pbm-status-group-{i}-marker) '
             f'{{border-left:4px solid {color} !important;}}\n'
+            f'{group_scope} {{gap: 0.10rem !important;}}\n'
             f'{side_scope} {{border-left:4px solid {color};padding:0.25rem 0.28rem 0.28rem 0.38rem;'
             'margin-bottom:0.18rem;background:rgba(248,248,253,0.78);border-radius:10px;gap:0 !important;}\n'
         )
