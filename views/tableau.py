@@ -399,7 +399,6 @@ def _render_add_task_form(project: dict, subproject: dict, data: dict):
             key=f"toggle_add_task_{subproject['id']}",
             on_click=toggle_session_flag,
             args=(key,),
-            help="Afficher / masquer le formulaire d'ajout de tâche",
         )
 
     if not st.session_state[key]:
@@ -455,7 +454,6 @@ def render_tasks(project: dict, subproject: dict, data: dict):
                     value=False,
                     key=invoice_key,
                     label_visibility="collapsed",
-                    help="Cocher pour envoyer cette tâche dans l'onglet À facturer.",
                     on_change=set_invoice_state_from_widget,
                     args=("task", project["id"], task["id"], invoice_key),
                 )
@@ -465,7 +463,6 @@ def render_tasks(project: dict, subproject: dict, data: dict):
                     task.get("name") or "Tâche",
                     key=f"task_name_{task['id']}",
                     use_container_width=True,
-                    help="Modifier la tâche",
                 ):
                     edit_task_dialog(project, subproject, task, data)
                 with cols[3]:
@@ -491,7 +488,6 @@ def _render_add_subproject_form(project: dict, data: dict):
             key=f"toggle_add_subproject_{project['id']}",
             on_click=toggle_session_flag,
             args=(key,),
-            help="Afficher / masquer le formulaire d'ajout de sous-projet",
         )
 
     if not st.session_state[key]:
@@ -558,7 +554,6 @@ def render_subprojects(project: dict, data: dict):
                     value=False,
                     key=invoice_key,
                     label_visibility="collapsed",
-                    help="Cocher pour envoyer ce sous-projet dans l'onglet À facturer.",
                     on_change=set_invoice_state_from_widget,
                     args=("subproject", project["id"], subproject["id"], invoice_key),
                 )
@@ -568,13 +563,11 @@ def render_subprojects(project: dict, data: dict):
                     key=f"arrow_subproject_{subproject['id']}",
                     on_click=toggle_session_flag,
                     args=(expand_key,),
-                    help="Afficher / masquer les tâches",
                 )
                 if cols[2].button(
                     display_type,
                     key=f"subproject_name_{subproject['id']}",
                     use_container_width=True,
-                    help="Modifier le sous-projet",
                 ):
                     edit_subproject_dialog(project, subproject, data)
                 with cols[3]:
@@ -617,7 +610,6 @@ def render_project_row(project: dict, data: dict):
                 value=False,
                 key=invoice_key,
                 label_visibility="collapsed",
-                help="Cocher pour envoyer le projet complet dans l'onglet À facturer.",
                 on_change=set_invoice_state_from_widget,
                 args=("project", project_id, None, invoice_key),
             )
@@ -625,7 +617,6 @@ def render_project_row(project: dict, data: dict):
             cols[1].button(
                 arrow,
                 key=f"arrow_project_{project_id}",
-                help="Afficher / masquer les sous-projets",
                 on_click=toggle_session_flag,
                 args=(expand_key,),
             )
