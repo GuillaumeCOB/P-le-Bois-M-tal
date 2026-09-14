@@ -23,6 +23,11 @@ from views.gantt import render_gantt
 from views.nouveau_projet import render_nouveau_projet
 from views.parametres import render_parametres
 from views.tableau import render_tableau
+from views.export_pdf import (
+    build_tableau_pdf,
+    current_tableau_filters,
+    tableau_export_filename,
+)
 
 
 def _set_active_page(page_name: str):
@@ -47,7 +52,10 @@ if "pbm_active_page" not in st.session_state:
     st.session_state["pbm_active_page"] = "Tableau"
 
 with ui_container("pbm_main_navigation", "nav"):
-    nav_cols = st.columns([1.0, 1.42, 1.05, 1.05, 0.85, 1.15, 4.5], gap="small")
+    nav_cols = st.columns(
+        [1.0, 1.42, 1.05, 1.05, 0.85, 1.15, 3.30, 1.20],
+        gap="small",
+    )
     nav_items = ["Tableau", "Nouveau projet", "À facturer", "Calendrier", "Gantt", "Paramètres"]
     for col, page_name in zip(nav_cols[:6], nav_items):
         with col:
@@ -58,6 +66,19 @@ with ui_container("pbm_main_navigation", "nav"):
                 type="primary" if st.session_state["pbm_active_page"] == page_name else "secondary",
                 on_click=_set_active_page,
                 args=(page_name,),
+            )
+
+    if st.session_state["pbm_active_page"] == "Tableau":
+        pdf_filters = current_tableau_filters()
+        pdf_bytes = build_tableau_pdf(data, pdf_filters)
+        with nav_cols[7]:
+            st.download_button(
+                "Export PDF",
+                data=pdf_bytes,
+                file_name=tableau_export_filename(),
+                mime="application/pdf",
+                key="export_tableau_pdf",
+                use_container_width=True,
             )
 
 active_page = st.session_state["pbm_active_page"]
