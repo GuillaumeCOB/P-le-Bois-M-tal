@@ -626,7 +626,6 @@ def render_project_row(project: dict, data: dict):
                 project.get("name") or "Projet",
                 key=f"project_name_{project_id}",
                 use_container_width=True,
-                help="Modifier le projet",
             ):
                 edit_project_dialog(project, data)
             with cols[4]:
