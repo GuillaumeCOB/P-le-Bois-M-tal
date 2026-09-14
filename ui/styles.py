@@ -26,6 +26,8 @@ def inject_brand_styles(data: dict):
     formcard = css_scope("formcard")
     nav = css_scope("nav")
     summary = css_scope("summary")
+    addtasktoggle = css_scope("addtasktoggle")
+    addsubtoggle = css_scope("addsubtoggle")
 
     css = f"""
     :root {{
@@ -266,34 +268,38 @@ def inject_brand_styles(data: dict):
     /* En-têtes des niveaux 2 et 3 : repères très légers, sans effet de carte. */
     {subprojects} .pbm-grid-header-wrap,
     {tasks} .pbm-grid-header-wrap {{
-        padding-bottom: 2px;
+        padding: 0.18rem 0 0.38rem;
+        margin: 0;
+        position: relative;
+        z-index: 1;
     }}
     {subprojects} .pbm-grid-header,
     {tasks} .pbm-grid-header {{
-        min-height: 17px;
-        padding: 0 0.12rem;
+        min-height: 18px;
+        padding: 0 0.08rem 0.18rem;
         margin: 0;
         background: transparent;
         border: 0;
         border-bottom: 1px solid rgba(64,51,140,0.055);
         border-radius: 0;
+        overflow: hidden;
     }}
     {subprojects} .pbm-grid-header .pbm-grid-cell,
     {tasks} .pbm-grid-header .pbm-grid-cell {{
-        min-height: 16px;
-        padding: 0 0.20rem;
-        font-size: 0.54rem;
+        min-height: 15px;
+        padding: 0 0.12rem;
+        font-size: 0.52rem;
         line-height: 1;
         font-weight: 650;
-        letter-spacing: 0.035em;
-        color: rgba(112,117,154,0.64);
+        letter-spacing: 0.03em;
+        color: rgba(112,117,154,0.60);
     }}
     {tasks} .pbm-grid-header {{
         border-bottom-color: rgba(64,51,140,0.04);
     }}
     {tasks} .pbm-grid-header .pbm-grid-cell {{
-        font-size: 0.52rem;
-        color: rgba(112,117,154,0.56);
+        font-size: 0.50rem;
+        color: rgba(112,117,154,0.54);
     }}
 
     .pbm-grid-total {{
@@ -416,7 +422,8 @@ def inject_brand_styles(data: dict):
         min-height: 0 !important;
         display: flex !important;
         align-items: center !important;
-        padding: 0 0.26rem !important;
+        justify-content: center !important;
+        padding: 0 0.22rem !important;
         border: 1px solid transparent !important;
         border-radius: 6px !important;
         background: transparent !important;
@@ -477,21 +484,61 @@ def inject_brand_styles(data: dict):
     {taskrow} [data-testid="stCheckbox"] label {{height:23px !important;}}
 
     {subprojects} {{
-        margin: 0.06rem 0 0.22rem 0.85rem;
+        margin: 0.14rem 0 0.20rem 0.85rem;
         width: calc(100% - 0.85rem);
-        padding: 0.04rem 0.16rem 0.12rem 0.42rem;
+        padding: 0.02rem 0.14rem 0.10rem 0.42rem;
         border-left: 2px solid rgba(59,56,245,0.16);
         background: transparent;
         border-radius: 0;
     }}
 
     {tasks} {{
-        margin: 0.04rem 0 0.14rem 0.72rem;
+        margin: 0.12rem 0 0.12rem 0.72rem;
         width: calc(100% - 0.72rem);
-        padding: 0.02rem 0.12rem 0.08rem 0.34rem;
+        padding: 0.01rem 0.10rem 0.06rem 0.34rem;
         border-left: 1px solid rgba(64,51,140,0.10);
         background: transparent;
         border-radius: 0;
+    }}
+
+
+
+    /* Boutons d'ajout compacts (+ / −) */
+    {addtasktoggle},
+    {addsubtoggle} {{
+        width: fit-content !important;
+        margin-top: 0.16rem !important;
+        margin-bottom: 0.04rem !important;
+    }}
+    {addtasktoggle} [data-testid="stButton"],
+    {addsubtoggle} [data-testid="stButton"] {{
+        margin: 0 !important;
+        padding: 0 !important;
+        width: fit-content !important;
+    }}
+    {addtasktoggle} [data-testid="stButton"] button,
+    {addsubtoggle} [data-testid="stButton"] button {{
+        min-width: 28px !important;
+        width: 28px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: 0 !important;
+        border-radius: 999px !important;
+        border: 1px solid rgba(64,51,140,0.14) !important;
+        background: rgba(255,255,255,0.92) !important;
+        box-shadow: 0 1px 4px rgba(64,51,140,0.05) !important;
+    }}
+    {addtasktoggle} [data-testid="stButton"] button:hover,
+    {addsubtoggle} [data-testid="stButton"] button:hover {{
+        background: rgba(59,56,245,0.08) !important;
+        border-color: rgba(59,56,245,0.22) !important;
+    }}
+    {addtasktoggle} [data-testid="stButton"] button p,
+    {addsubtoggle} [data-testid="stButton"] button p {{
+        font-size: 1rem !important;
+        line-height: 1 !important;
+        font-weight: 700 !important;
+        margin: 0 !important;
     }}
 
     {subprojects} [data-testid="stForm"],
