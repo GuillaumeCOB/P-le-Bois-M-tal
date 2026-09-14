@@ -246,7 +246,7 @@ def inject_brand_styles(data: dict):
         display:block;
         width:100%;
         box-sizing:border-box;
-        padding-bottom: 12px;
+        padding-bottom: 20px;
     }}
     .pbm-grid-header {{
         min-height: 40px;
