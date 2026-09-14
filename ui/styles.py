@@ -335,7 +335,7 @@ def inject_brand_styles(data: dict):
         gap: 0 !important;
     }}
 
-    {project} {{margin-bottom: 0.10rem;}}
+    {project} {{margin-bottom: 0.25rem;}}
 
     /* Hiérarchie compacte. On laisse Streamlit calculer la taille naturelle
        des éléments internes au lieu de leur imposer plusieurs hauteurs concurrentes. */
