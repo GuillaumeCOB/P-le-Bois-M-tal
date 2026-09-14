@@ -124,7 +124,7 @@ def _render_invoice_table(entries: list[dict], month_key: str):
         <style>
         /* En-tête du tableau À facturer */
         .invoice-header [data-testid="stHorizontalBlock"] {
-            min-height: 30px !important;
+            min-height: 10px !important;
         }
 
         /* Lignes du tableau À facturer */
