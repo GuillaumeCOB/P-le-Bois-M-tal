@@ -24,7 +24,7 @@ from reportlab.platypus import (
 
 from config import LOGO_PATH, PRIMARY, PRIMARY_DARK
 from ui.components import project_totals, projects_totals
-from views.tableau import get_filtered_projects
+from views.tableau import get_filtered_projects, project_is_urgent
 
 
 PARIS_TZ = ZoneInfo("Europe/Paris")
@@ -346,8 +346,10 @@ def build_tableau_pdf(data: dict, filters: dict) -> bytes:
             )
 
             table_rows = [header]
+            urgent_row_indexes = []
             for project in status_projects:
                 budget, hours = project_totals(project)
+                row_index = len(table_rows)
                 table_rows.append(
                     [
                         _paragraph(project.get("project_number"), cell_bold_style),
@@ -359,6 +361,8 @@ def build_tableau_pdf(data: dict, filters: dict) -> bytes:
                         Paragraph(escape(_hours(hours)), cell_right_style),
                     ]
                 )
+                if project_is_urgent(project):
+                    urgent_row_indexes.append(row_index)
 
             table_rows.append(
                 [
@@ -381,23 +385,42 @@ def build_tableau_pdf(data: dict, filters: dict) -> bytes:
                 repeatRows=1,
                 hAlign="LEFT",
             )
-            table.setStyle(
-                TableStyle(
+            table_style_commands = [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F4F3FD")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#5D6288")),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.8, status_color),
+                ("GRID", (0, 1), (-1, -2), 0.25, colors.HexColor("#EAEAF3")),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#FAFAFD")),
+                ("LINEABOVE", (0, -1), (-1, -1), 0.6, colors.HexColor("#D9D8E9")),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 3.2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3.2),
+            ]
+
+            # Même orange clair que la ligne urgente du Tableau Streamlit
+            # (rgba(255, 92, 36, 0.12) sur fond blanc ≈ #FFEBE5).
+            for row_index in urgent_row_indexes:
+                table_style_commands.extend(
                     [
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F4F3FD")),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#5D6288")),
-                        ("LINEBELOW", (0, 0), (-1, 0), 0.8, status_color),
-                        ("GRID", (0, 1), (-1, -2), 0.25, colors.HexColor("#EAEAF3")),
-                        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#FAFAFD")),
-                        ("LINEABOVE", (0, -1), (-1, -1), 0.6, colors.HexColor("#D9D8E9")),
-                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3.2),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.2),
+                        (
+                            "BACKGROUND",
+                            (0, row_index),
+                            (-1, row_index),
+                            colors.HexColor("#FFEBE5"),
+                        ),
+                        (
+                            "LINEBELOW",
+                            (0, row_index),
+                            (-1, row_index),
+                            0.45,
+                            colors.HexColor("#FFD8CA"),
+                        ),
                     ]
                 )
-            )
+
+            table.setStyle(TableStyle(table_style_commands))
             story.append(table)
 
     doc.build(story, onFirstPage=_page_header_footer, onLaterPages=_page_header_footer)
