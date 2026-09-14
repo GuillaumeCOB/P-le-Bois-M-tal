@@ -665,7 +665,7 @@ def inject_brand_styles(data: dict):
         css += (
             f'[data-testid="stExpander"]:has(.pbm-status-group-{i}-marker) '
             f'{{border-left:4px solid {color} !important;}}\n'
-            f'{group_scope} {{gap: 0.18rem !important;padding-top: 0.20rem !important;}}\n'
+            f'{group_scope} {{gap: 0.18rem !important;padding-top: 0.10rem !important;}}\n'
             f'{side_scope} {{border-left:4px solid {color};padding:0.25rem 0.28rem 0.28rem 0.38rem;'
             'margin-bottom:0.18rem;background:rgba(248,248,253,0.78);border-radius:10px;gap:0 !important;}\n'
         )
