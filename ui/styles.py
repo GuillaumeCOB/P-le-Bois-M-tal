@@ -592,7 +592,7 @@ def inject_brand_styles(data: dict):
         text-transform: uppercase;
         margin: 0.40rem 0 0.70rem 0.08rem;
     }}
-    {summary} .pbm-summary-section.second {{margin-top: 0.75rem;}}
+    {summary} .pbm-summary-section.second {{margin-top: 0.95rem;}}
     {summary} [data-testid="stButton"] button {{
         min-height: 2.05rem !important;
         height: 2.05rem !important;
