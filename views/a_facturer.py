@@ -119,6 +119,28 @@ def _cancel_invoice(entry: dict):
 
 
 def _render_invoice_table(entries: list[dict], month_key: str):
+    st.markdown(
+        """
+        <style>
+        /* En-tête du tableau À facturer */
+        .invoice-header [data-testid="stHorizontalBlock"] {
+            min-height: 30px !important;
+        }
+
+        /* Lignes du tableau À facturer */
+        .invoice-row [data-testid="stHorizontalBlock"] {
+            min-height: 28px !important;
+        }
+
+        .invoice-row [data-testid="stMarkdownContainer"] p,
+        .invoice-header [data-testid="stMarkdownContainer"] p {
+            margin: 0 !important;
+            line-height: 1 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     widths = [0.82, 0.72, 1.65, 1.35, 1.05, 2.10, 0.92, 1.30, 0.62]
 
     header = st.columns(widths, gap="small", vertical_alignment="center")
@@ -171,9 +193,6 @@ def _render_invoice_table(entries: list[dict], month_key: str):
 
 def render_a_facturer(data: dict):
     st.subheader("À facturer")
-    st.caption(
-        "Le bouton ↩ permet d'annuler une mise à facturer. L'élément réapparaît alors dans le Tableau."
-    )
 
     entries = _invoice_entries(data)
     if not entries:
