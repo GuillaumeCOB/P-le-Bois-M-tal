@@ -4,7 +4,7 @@ import streamlit as st
 
 from config import DISCIPLINES
 from data_service import run_db_action
-from ui.components import display_amount
+from ui.components import css_scope, display_amount, ui_container
 
 MOIS_FR = [
     "",
@@ -118,80 +118,141 @@ def _cancel_invoice(entry: dict):
     )
 
 
+def _invoice_cell(col, value, *, bold=False, align="left"):
+    text = str(value if value not in (None, "") else "—")
+    weight = "700" if bold else "400"
+    justify = {"left": "flex-start", "center": "center", "right": "flex-end"}.get(align, "flex-start")
+    col.markdown(
+        f'<div class="pbm-invoice-cell" style="justify-content:{justify};font-weight:{weight};">{text}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _render_invoice_table(entries: list[dict], month_key: str):
+    widths = [0.82, 0.72, 1.65, 1.35, 1.05, 2.10, 0.92, 1.30, 0.62]
+
+    with ui_container(f"invoice_header_{month_key}", "invoiceheader"):
+        header = st.columns(widths, gap="small", vertical_alignment="center")
+        labels = [
+            "Niveau",
+            "N°",
+            "Projet",
+            "Client",
+            "Structure",
+            "Élément",
+            "Montant",
+            "Mise à facturer",
+            "",
+        ]
+        for index, (col, label) in enumerate(zip(header, labels)):
+            if label:
+                _invoice_cell(
+                    col,
+                    label,
+                    bold=True,
+                    align="right" if index == 6 else "left",
+                )
+
+    for index, entry in enumerate(entries):
+        with ui_container(
+            f"invoice_row_{month_key}_{index}_{entry['_level']}_{entry['_project_id']}",
+            "invoicerow",
+        ):
+            cols = st.columns(widths, gap="small", vertical_alignment="center")
+            _invoice_cell(cols[0], entry["Niveau"])
+            _invoice_cell(cols[1], entry["N°"])
+            _invoice_cell(cols[2], entry["Projet"])
+            _invoice_cell(cols[3], entry["Client"])
+            _invoice_cell(cols[4], entry["Structure"])
+            _invoice_cell(cols[5], entry["Élément"])
+            _invoice_cell(cols[6], display_amount(entry["Montant"]), align="right")
+            _invoice_cell(cols[7], entry["Date"].strftime("%d/%m/%Y %H:%M"))
+
+            if cols[8].button(
+                "↩",
+                key=(
+                    f"cancel_invoice_{month_key}_{entry['_level']}_"
+                    f"{entry['_project_id']}_{entry['_entity_id'] or 'project'}_{index}"
+                ),
+                help="Annuler la mise à facturer et remettre l'élément dans le Tableau.",
+                use_container_width=True,
+            ):
+                _cancel_invoice(entry)
+                st.rerun()
+
+
+def render_a_facturer(data: dict):
+    invoice_header = css_scope("invoiceheader")
+    invoice_row = css_scope("invoicerow")
     st.markdown(
-        """
+        f"""
         <style>
-        /* En-tête du tableau À facturer */
-        .invoice-header [data-testid="stHorizontalBlock"] {
-            min-height: 10px !important;
-        }
-
-        /* Lignes du tableau À facturer */
-        .invoice-row [data-testid="stHorizontalBlock"] {
+        .pbm-invoice-cell {{
+            display: flex;
+            align-items: center;
+            width: 100%;
+            min-height: 24px;
+            padding: 0 0.18rem;
+            margin: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            font-size: 0.78rem;
+            line-height: 1;
+            color: #1F2340;
+        }}
+        {invoice_header} {{
+            min-height: 30px !important;
+            padding: 0.08rem 0.12rem !important;
+            margin: 0 0 0.10rem 0 !important;
+            background: rgba(59,56,245,0.055);
+            border: 1px solid rgba(59,56,245,0.12);
+            border-radius: 8px;
+            gap: 0 !important;
+        }}
+        {invoice_header} .pbm-invoice-cell {{
+            min-height: 26px;
+            font-size: 0.70rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #70759A;
+        }}
+        {invoice_row} {{
             min-height: 28px !important;
-        }
-
-        .invoice-row [data-testid="stMarkdownContainer"] p,
-        .invoice-header [data-testid="stMarkdownContainer"] p {
+            padding: 0.02rem 0.12rem !important;
+            margin: 0 !important;
+            border-bottom: 1px solid rgba(64,51,140,0.07);
+            gap: 0 !important;
+        }}
+        {invoice_row} [data-testid="stHorizontalBlock"] {{
+            min-height: 28px !important;
+            align-items: center !important;
+            gap: 6px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }}
+        {invoice_row} :is(.element-container, [data-testid="stElementContainer"]),
+        {invoice_header} :is(.element-container, [data-testid="stElementContainer"]) {{
+            margin: 0 !important;
+            padding: 0 !important;
+        }}
+        {invoice_row} [data-testid="stButton"] button {{
+            min-height: 24px !important;
+            height: 24px !important;
+            padding: 0 !important;
+            border-radius: 6px !important;
+        }}
+        {invoice_row} [data-testid="stButton"] button p {{
             margin: 0 !important;
             line-height: 1 !important;
-        }
+            font-size: 0.86rem !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
     )
-    widths = [0.82, 0.72, 1.65, 1.35, 1.05, 2.10, 0.92, 1.30, 0.62]
 
-    header = st.columns(widths, gap="small", vertical_alignment="center")
-    labels = [
-        "Niveau",
-        "N°",
-        "Projet",
-        "Client",
-        "Structure",
-        "Élément",
-        "Montant",
-        "Mise à facturer",
-        "",
-    ]
-    for col, label in zip(header, labels):
-        if label:
-            col.markdown(f"**{label}**")
-
-    st.divider()
-
-    for index, entry in enumerate(entries):
-        cols = st.columns(widths, gap="small", vertical_alignment="center")
-        cols[0].write(entry["Niveau"])
-        cols[1].write(entry["N°"])
-        cols[2].write(entry["Projet"])
-        cols[3].write(entry["Client"])
-        cols[4].write(entry["Structure"])
-        cols[5].write(entry["Élément"])
-        cols[6].write(display_amount(entry["Montant"]))
-        cols[7].write(entry["Date"].strftime("%d/%m/%Y %H:%M"))
-
-        if cols[8].button(
-            "↩",
-            key=(
-                f"cancel_invoice_{month_key}_{entry['_level']}_"
-                f"{entry['_project_id']}_{entry['_entity_id'] or 'project'}_{index}"
-            ),
-            help="Annuler la mise à facturer et remettre l'élément dans le Tableau.",
-            use_container_width=True,
-        ):
-            _cancel_invoice(entry)
-            st.rerun()
-
-        if index < len(entries) - 1:
-            st.markdown(
-                "<hr style='margin:0.18rem 0; border:0; border-top:1px solid rgba(64,51,140,0.07);'>",
-                unsafe_allow_html=True,
-            )
-
-
-def render_a_facturer(data: dict):
     st.subheader("À facturer")
 
     entries = _invoice_entries(data)
