@@ -97,6 +97,31 @@ def _active_projects(data: dict) -> list[dict]:
     return [p for p in data.get("projects", []) if not p.get("invoice_ready")]
 
 
+def get_filtered_projects(
+    data: dict,
+    *,
+    query: str = "",
+    person_filter: str | None = None,
+    type_filter: str | None = None,
+    discipline_filter: str | None = None,
+    status_filter: str | None = None,
+) -> list[dict]:
+    """Retourne les projets correspondant aux filtres actuellement utilisés par le Tableau."""
+    normalized_query = str(query or "").strip().casefold()
+    return [
+        project
+        for project in _active_projects(data)
+        if (not normalized_query or normalized_query in project_search_blob(project))
+        and _project_matches_collaborator(project, person_filter)
+        and _project_matches_type(project, type_filter)
+        and _project_matches_status(project, status_filter)
+        and (
+            discipline_filter is None
+            or project.get("discipline") == discipline_filter
+        )
+    ]
+
+
 @st.dialog("Modifier le projet")
 def edit_project_dialog(project: dict, data: dict):
     with st.form(f"dialog_edit_project_{project['id']}"):
