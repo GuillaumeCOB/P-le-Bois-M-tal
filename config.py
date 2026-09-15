@@ -23,7 +23,7 @@ PROJECT_ROW_WIDTHS = [0.46, 0.38, 0.82, 2.65, 1.45, 1.10, 1.12, 0.95, 0.90]
 PROJECT_ROW_LABELS = ["Fact.", "", "N°", "Projet", "Client", "Structure", "Statut", "Budget", "Heures"]
 
 # Sous-projet : Phase et Type étant le même concept, on ne garde que Type.
-SUBPROJECT_ROW_WIDTHS = [0.46, 0.38, 1.35, 0.82, 1.65, 1.05, 0.95, 0.90]
+SUBPROJECT_ROW_WIDTHS = [0.46, 0.38, 0.95, 1.70, 1.65, 1.05, 0.95, 0.90]
 SUBPROJECT_ROW_LABELS = ["Fact.", "", "Type", "Complément", "Collaborateur", "Échéance", "Budget", "Heures"]
 
 # Tâche : pas de statut, celui-ci est porté par le projet parent.
