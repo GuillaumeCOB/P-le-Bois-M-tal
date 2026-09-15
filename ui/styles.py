@@ -531,7 +531,7 @@ def inject_brand_styles(data: dict):
     {taskrow} [data-testid="stCheckbox"] label {{height:23px !important;}}
 
     {subprojects} {{
-        margin: 0.14rem 0 0.20rem 0.85rem;
+        margin: 0.14rem 0 0.30rem 0.85rem;
         width: calc(100% - 0.85rem);
         padding: 0.02rem 0.14rem 0.10rem 0.42rem;
         border-left: 2px solid rgba(59,56,245,0.16);
