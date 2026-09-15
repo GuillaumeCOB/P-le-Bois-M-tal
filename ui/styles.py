@@ -495,7 +495,7 @@ def inject_brand_styles(data: dict):
     }}
     
     {subprojectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button p {{
-        font-size: 1.05rem !important;
+        font-size: 1.40rem !important;
         font-weight: 700 !important;
     }}
 
