@@ -540,7 +540,7 @@ def inject_brand_styles(data: dict):
     }}
 
     {subprojectrow} {{
-        margin-bottom: 0.10rem !important;
+        margin-bottom: 0.20rem !important;
     }}
 
     {tasks} {{
