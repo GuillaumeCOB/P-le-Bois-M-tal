@@ -48,6 +48,15 @@ def _set_summary_status(value):
     st.session_state["pbm_summary_status"] = value
 
 
+def _set_subproject_complement(project_id: str, subproject_id: str, state_key: str):
+    run_db_action(
+        "update_subproject",
+        project_id,
+        subproject_id,
+        {"complement": bool(st.session_state.get(state_key, False))},
+    )
+
+
 HOURS_PER_DAY = 8
 PARIS_TZ = ZoneInfo("Europe/Paris")
 
@@ -262,13 +271,17 @@ def edit_subproject_dialog(project: dict, subproject: dict, data: dict):
         if current_type not in type_options:
             type_options.append(current_type)
 
-        c0, c1 = st.columns([1.2, 1.8])
+        c0, c1, c2 = st.columns([1.2, 0.8, 1.8])
         project_type = c0.selectbox(
             "Type",
             type_options,
             index=type_options.index(current_type),
         )
-        assigned = c1.multiselect(
+        complement = c1.checkbox(
+            "Complément",
+            value=bool(subproject.get("complement", False)),
+        )
+        assigned = c2.multiselect(
             "Collaborateurs",
             data["collaborators"],
             default=[
@@ -313,6 +326,7 @@ def edit_subproject_dialog(project: dict, subproject: dict, data: dict):
                 # phase reste en miroir pour compatibilité avec les données v2.
                 "phase": selected_type or "Sous-projet",
                 "type": selected_type,
+                "complement": complement,
                 "assigned": assigned,
                 "due_date": due_date.isoformat() if due_date else None,
                 "budget": budget,
@@ -590,10 +604,11 @@ def _render_add_subproject_form(project: dict, data: dict):
         return
 
     with st.form(f"add_subproject_{project['id']}", clear_on_submit=True):
-        r1 = st.columns([1.25, 1.75])
+        r1 = st.columns([1.25, 0.8, 1.75])
         type_options = ["(aucun)"] + list(data["types"])
         project_type = r1[0].selectbox("Type", type_options)
-        assigned = r1[1].multiselect("Collaborateur", data["collaborators"])
+        complement = r1[1].checkbox("Complément", value=False)
+        assigned = r1[2].multiselect("Collaborateur", data["collaborators"])
         r2 = st.columns([1.2, 1.0, 1.0])
         due_date = r2[0].date_input("Échéance", value=date.today())
         budget = r2[1].number_input("Budget (€)", min_value=0.0, step=100.0)
@@ -610,6 +625,7 @@ def _render_add_subproject_form(project: dict, data: dict):
                 due_date.isoformat() if due_date else None,
                 budget,
                 hours,
+                complement=complement,
             )
             invalidate_data_cache()
             st.rerun()
@@ -624,8 +640,8 @@ def render_subprojects(project: dict, data: dict):
             render_grid_header(
                 SUBPROJECT_ROW_LABELS,
                 SUBPROJECT_ROW_WIDTHS,
-                center_indices=(0, 1),
-                right_indices=(5, 6),
+                center_indices=(0, 1, 3),
+                right_indices=(6, 7),
             )
         else:
             st.caption("Aucun sous-projet actif.")
@@ -666,13 +682,24 @@ def render_subprojects(project: dict, data: dict):
                     use_container_width=True,
                 ):
                     edit_subproject_dialog(project, subproject, data)
-                with cols[3]:
-                    cell(", ".join(subproject.get("assigned", [])) or "—")
+
+                complement_key = f"complement_subproject_{subproject['id']}"
+                cols[3].checkbox(
+                    "Complément",
+                    value=bool(subproject.get("complement", False)),
+                    key=complement_key,
+                    label_visibility="collapsed",
+                    on_change=_set_subproject_complement,
+                    args=(project["id"], subproject["id"], complement_key),
+                )
+
                 with cols[4]:
-                    cell(display_date(subproject.get("due_date")))
+                    cell(", ".join(subproject.get("assigned", [])) or "—")
                 with cols[5]:
-                    cell(display_amount(subproject.get("budget")), "number")
+                    cell(display_date(subproject.get("due_date")))
                 with cols[6]:
+                    cell(display_amount(subproject.get("budget")), "number")
+                with cols[7]:
                     cell(display_hours(subproject.get("estimated_time")), "number")
 
             if st.session_state[expand_key]:
