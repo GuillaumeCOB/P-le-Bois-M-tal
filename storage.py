@@ -113,6 +113,7 @@ def _normalise_subproject(subproject: dict, fallback_status: str):
         "id": uuid.uuid4().hex,
         "phase": subproject.get("name") or "Phase",
         "type": None,
+        "complement": False,
         "assigned": [],
         "status": fallback_status,
         "due_date": None,
@@ -473,6 +474,7 @@ def add_subproject(
     budget: float,
     estimated_time: float,
     remarks: str = "",
+    complement: bool = False,
 ):
     def m(data):
         for project in data["projects"]:
@@ -482,6 +484,7 @@ def add_subproject(
                         "id": uuid.uuid4().hex,
                         "phase": phase,
                         "type": project_type,
+                        "complement": bool(complement),
                         "assigned": assigned or [],
                         "status": status,
                         "due_date": due_date,
