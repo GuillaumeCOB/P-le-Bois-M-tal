@@ -490,7 +490,7 @@ def inject_brand_styles(data: dict):
     {taskrow} [data-testid="stButton"] button p {{font-size:0.77rem;}}
 
     {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button p {{
-    font-size: 1.15rem !important;
+    font-size: 1.30rem !important;
     font-weight: 700 !important;
     }}
     
