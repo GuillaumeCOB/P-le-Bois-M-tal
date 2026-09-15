@@ -48,15 +48,6 @@ def _set_summary_status(value):
     st.session_state["pbm_summary_status"] = value
 
 
-def _set_subproject_complement(project_id: str, subproject_id: str, state_key: str):
-    run_db_action(
-        "update_subproject",
-        project_id,
-        subproject_id,
-        {"complement": bool(st.session_state.get(state_key, False))},
-    )
-
-
 HOURS_PER_DAY = 8
 PARIS_TZ = ZoneInfo("Europe/Paris")
 
@@ -277,9 +268,9 @@ def edit_subproject_dialog(project: dict, subproject: dict, data: dict):
             type_options,
             index=type_options.index(current_type),
         )
-        complement = c1.checkbox(
+        complement = c1.text_input(
             "Complément",
-            value=bool(subproject.get("complement", False)),
+            value=str(subproject.get("complement") or ""),
         )
         assigned = c2.multiselect(
             "Collaborateurs",
@@ -326,7 +317,7 @@ def edit_subproject_dialog(project: dict, subproject: dict, data: dict):
                 # phase reste en miroir pour compatibilité avec les données v2.
                 "phase": selected_type or "Sous-projet",
                 "type": selected_type,
-                "complement": complement,
+                "complement": complement.strip(),
                 "assigned": assigned,
                 "due_date": due_date.isoformat() if due_date else None,
                 "budget": budget,
@@ -607,7 +598,7 @@ def _render_add_subproject_form(project: dict, data: dict):
         r1 = st.columns([1.25, 0.8, 1.75])
         type_options = ["(aucun)"] + list(data["types"])
         project_type = r1[0].selectbox("Type", type_options)
-        complement = r1[1].checkbox("Complément", value=False)
+        complement = r1[1].text_input("Complément", value="")
         assigned = r1[2].multiselect("Collaborateur", data["collaborators"])
         r2 = st.columns([1.2, 1.0, 1.0])
         due_date = r2[0].date_input("Échéance", value=date.today())
@@ -625,7 +616,7 @@ def _render_add_subproject_form(project: dict, data: dict):
                 due_date.isoformat() if due_date else None,
                 budget,
                 hours,
-                complement=complement,
+                complement=complement.strip(),
             )
             invalidate_data_cache()
             st.rerun()
@@ -640,7 +631,7 @@ def render_subprojects(project: dict, data: dict):
             render_grid_header(
                 SUBPROJECT_ROW_LABELS,
                 SUBPROJECT_ROW_WIDTHS,
-                center_indices=(0, 1, 3),
+                center_indices=(0, 1, 2, 3),
                 right_indices=(6, 7),
             )
         else:
@@ -683,15 +674,8 @@ def render_subprojects(project: dict, data: dict):
                 ):
                     edit_subproject_dialog(project, subproject, data)
 
-                complement_key = f"complement_subproject_{subproject['id']}"
-                cols[3].checkbox(
-                    "Complément",
-                    value=bool(subproject.get("complement", False)),
-                    key=complement_key,
-                    label_visibility="collapsed",
-                    on_change=_set_subproject_complement,
-                    args=(project["id"], subproject["id"], complement_key),
-                )
+                with cols[3]:
+                    cell(subproject.get("complement") or "—")
 
                 with cols[4]:
                     cell(", ".join(subproject.get("assigned", [])) or "—")
