@@ -192,7 +192,7 @@ def get_filtered_projects(
     ]
 
 
-@st.dialog("Modifier le projet", width="medium")
+@st.dialog("Modifier le projet", width="large")
 def edit_project_dialog(project: dict, data: dict):
     with st.form(f"dialog_edit_project_{project['id']}"):
         c1, c2 = st.columns([1.0, 2.0])
