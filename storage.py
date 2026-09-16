@@ -344,6 +344,37 @@ def add_status(path: str, name: str, color: str = "#579bfc"):
     return _mutate(path, m)
 
 
+def update_status(path: str, old_name: str, new_name: str, color: str):
+    old_name = old_name.strip()
+    new_name = new_name.strip()
+
+    def m(data):
+        if not old_name or old_name not in data["statuses"] or not new_name:
+            return
+        if new_name != old_name and new_name in data["statuses"]:
+            return
+
+        idx = data["statuses"].index(old_name)
+        data["statuses"][idx] = new_name
+
+        previous_color = data["status_colors"].pop(old_name, None)
+        data["status_colors"][new_name] = color or previous_color or "#579bfc"
+
+        if new_name != old_name:
+            for project in data["projects"]:
+                if project.get("status") == old_name:
+                    project["status"] = new_name
+                # Legacy fields kept in sync for backward compatibility.
+                for subproject in project.get("subprojects", []):
+                    if subproject.get("status") == old_name:
+                        subproject["status"] = new_name
+                    for task in subproject.get("tasks", []):
+                        if task.get("status") == old_name:
+                            task["status"] = new_name
+
+    return _mutate(path, m)
+
+
 def remove_status(path: str, name: str, fallback_status: str):
     def m(data):
         if name in data["statuses"]:
@@ -387,6 +418,35 @@ def add_type(path: str, name: str, color: str = "#eeeeee"):
         if name and name not in data["types"]:
             data["types"].append(name)
             data["type_colors"][name] = color
+
+    return _mutate(path, m)
+
+
+def update_type(path: str, old_name: str, new_name: str, color: str):
+    old_name = old_name.strip()
+    new_name = new_name.strip()
+
+    def m(data):
+        if not old_name or old_name not in data["types"] or not new_name:
+            return
+        if new_name != old_name and new_name in data["types"]:
+            return
+
+        idx = data["types"].index(old_name)
+        data["types"][idx] = new_name
+
+        previous_color = data["type_colors"].pop(old_name, None)
+        data["type_colors"][new_name] = color or previous_color or "#eeeeee"
+
+        if new_name != old_name:
+            for project in data["projects"]:
+                if project.get("type") == old_name:
+                    project["type"] = new_name
+                for subproject in project.get("subprojects", []):
+                    if subproject.get("type") == old_name:
+                        subproject["type"] = new_name
+                    if subproject.get("phase") == old_name:
+                        subproject["phase"] = new_name
 
     return _mutate(path, m)
 
