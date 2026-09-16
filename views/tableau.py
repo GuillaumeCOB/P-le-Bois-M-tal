@@ -12,7 +12,6 @@ from config import (
     PRIMARY,
     PRIMARY_DARK,
     PROJECT_ROW_LABELS,
-    PROJECT_ROW_WIDTHS,
     SUBPROJECT_ROW_LABELS,
     SUBPROJECT_ROW_WIDTHS,
     TASK_ROW_LABELS,
@@ -50,6 +49,12 @@ def _set_summary_status(value):
 
 HOURS_PER_DAY = 8
 PARIS_TZ = ZoneInfo("Europe/Paris")
+
+# Largeurs de la ligne projet :
+# Fact. | flèche | N° | Projet | Client | Structure | Statut | Budget | Heures
+# La colonne Projet est volontairement élargie ; Client / Structure / Statut
+# sont décalés vers la droite sans réduire Budget / Heures.
+PROJECT_ROW_WIDTHS = [0.46, 0.38, 0.72, 3.20, 1.45, 0.90, 0.92, 0.95, 0.90]
 
 
 def _parse_date(value):
@@ -733,12 +738,16 @@ def render_project_row(project: dict, data: dict):
             )
             with cols[2]:
                 project_number_cell(project)
-            if cols[3].button(
-                project.get("name") or "Projet",
-                key=f"project_name_{project_id}",
-                use_container_width=True,
-            ):
-                edit_project_dialog(project, data)
+            # Conteneur dédié au nom du projet : permet un alignement à gauche
+            # fiable sans dépendre de la structure interne / nth-child de Streamlit.
+            with cols[3]:
+                with ui_container(f"pbm_projectname_{project_id}", "projectname"):
+                    if st.button(
+                        project.get("name") or "Projet",
+                        key=f"project_name_{project_id}",
+                        use_container_width=True,
+                    ):
+                        edit_project_dialog(project, data)
             with cols[4]:
                 cell(project.get("client") or "—")
             with cols[5]:
