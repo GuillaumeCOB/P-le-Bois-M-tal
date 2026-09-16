@@ -31,6 +31,7 @@ def inject_brand_styles(data: dict):
     urgentfilter = css_scope("urgentfilter")
     urgentfilteractive = css_scope("urgentfilteractive")
     urgentproject = css_scope("urgentproject")
+    projectname = css_scope("projectname")
 
     css = f"""
     :root {{
@@ -499,14 +500,36 @@ def inject_brand_styles(data: dict):
         font-weight: 700 !important;
     }}
 
-    /* Boutons de nom : alignés à gauche. */
-    {projectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stButton"],
+    /* Nom du projet : conteneur dédié, indépendant de la position de colonne. */
+    {projectname} {{
+        width: 100% !important;
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    {projectname} [data-testid="stButton"] {{
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    {projectname} [data-testid="stButton"] button {{
+        width: 100% !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
+        font-weight: 700 !important;
+        padding-left: 0.22rem !important;
+    }}
+    {projectname} [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
+    {projectname} [data-testid="stButton"] button p {{
+        width: 100% !important;
+        text-align: left !important;
+    }}
+
+    /* Noms de sous-projets et tâches : alignés à gauche. */
     {subprojectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"],
     {taskrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] {{
         width: 100% !important;
     }}
-
-    {projectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stButton"] button,
     {subprojectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button,
     {taskrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button {{
         width: 100% !important;
@@ -514,15 +537,6 @@ def inject_brand_styles(data: dict):
         text-align: left !important;
         font-weight: 700 !important;
     }}
-
-    {projectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
-    {subprojectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
-    {taskrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button [data-testid="stMarkdownContainer"] {{
-        width: 100% !important;
-        text-align: left !important;
-    }}
-
-    {projectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stButton"] button p,
     {subprojectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button p,
     {taskrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button p {{
         width: 100% !important;
