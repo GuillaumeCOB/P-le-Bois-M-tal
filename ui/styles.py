@@ -489,6 +489,16 @@ def inject_brand_styles(data: dict):
     {subprojectrow} [data-testid="stButton"] button p {{font-size:0.79rem;}}
     {taskrow} [data-testid="stButton"] button p {{font-size:0.77rem;}}
 
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(4) [data-testid="stButton"] button {{
+    justify-content: flex-start !important;
+    text-align: left !important;
+    }}
+    
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(4) [data-testid="stButton"] button p {{
+        width: 100%;
+        text-align: left !important;
+    }}
+
     {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button p {{
     font-size: 1.50rem !important;
     font-weight: 700 !important;
