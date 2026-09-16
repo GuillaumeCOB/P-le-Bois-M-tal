@@ -489,33 +489,44 @@ def inject_brand_styles(data: dict):
     {subprojectrow} [data-testid="stButton"] button p {{font-size:0.79rem;}}
     {taskrow} [data-testid="stButton"] button p {{font-size:0.77rem;}}
 
-       /* Nom du projet aligné à gauche */
-    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(4) [data-testid="stButton"] button {{
-        justify-content: flex-start !important;
-        text-align: left !important;
-    }}
-    
-    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(4) [data-testid="stButton"] button p {{
-        width: 100% !important;
-        text-align: left !important;
-    }}
-
+    /* Flèches d'ouverture des projets et sous-projets. */
     {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button p {{
-    font-size: 1.50rem !important;
-    font-weight: 700 !important;
+        font-size: 1.50rem !important;
+        font-weight: 700 !important;
     }}
-    
     {subprojectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button p {{
         font-size: 1.40rem !important;
         font-weight: 700 !important;
     }}
 
-    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(4) [data-testid="stButton"] button,
-    {subprojectrow} [data-testid="stHorizontalBlock"] > :nth-child(3) [data-testid="stButton"] button,
-    {taskrow} [data-testid="stHorizontalBlock"] > :nth-child(3) [data-testid="stButton"] button {{
-        justify-content:flex-start !important;
-        text-align:left !important;
-        font-weight:700 !important;
+    /* Boutons de nom : alignés à gauche. */
+    {projectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stButton"],
+    {subprojectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"],
+    {taskrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] {{
+        width: 100% !important;
+    }}
+
+    {projectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stButton"] button,
+    {subprojectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button,
+    {taskrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button {{
+        width: 100% !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
+        font-weight: 700 !important;
+    }}
+
+    {projectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
+    {subprojectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
+    {taskrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button [data-testid="stMarkdownContainer"] {{
+        width: 100% !important;
+        text-align: left !important;
+    }}
+
+    {projectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stButton"] button p,
+    {subprojectrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button p,
+    {taskrow} [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stButton"] button p {{
+        width: 100% !important;
+        text-align: left !important;
     }}
 
     {projectrow} [data-testid="stCheckbox"],
@@ -562,8 +573,6 @@ def inject_brand_styles(data: dict):
         background: transparent;
         border-radius: 0;
     }}
-
-
 
     /* Boutons d'ajout compacts (+ / −) */
     {addtasktoggle},
@@ -687,7 +696,6 @@ def inject_brand_styles(data: dict):
 
     for i, discipline in enumerate(DISCIPLINES):
         color = safe_color(DISCIPLINE_COLORS.get(discipline), PRIMARY)
-        group_scope = css_scope(f"discipline-group-{i}")
         row_scope = css_scope(f"discipline-row-{i}")
         side_scope = css_scope(f"summary-discipline-{i}")
         css += (
