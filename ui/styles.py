@@ -31,7 +31,6 @@ def inject_brand_styles(data: dict):
     urgentfilter = css_scope("urgentfilter")
     urgentfilteractive = css_scope("urgentfilteractive")
     urgentproject = css_scope("urgentproject")
-    projectname = css_scope("projectname")
 
     css = f"""
     :root {{
@@ -500,29 +499,30 @@ def inject_brand_styles(data: dict):
         font-weight: 700 !important;
     }}
 
-    /* Nom du projet : conteneur dédié, indépendant de la position de colonne. */
-    {projectname} {{
-        width: 100% !important;
-        gap: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }}
-    {projectname} [data-testid="stButton"] {{
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }}
-    {projectname} [data-testid="stButton"] button {{
+    /* Nom du projet : tous les boutons de la ligne sont alignés à gauche,
+       puis la flèche (2e colonne) est recentrée juste après.
+       Cela évite de dépendre du DOM interne du bouton de nom. */
+    {projectrow} [data-testid="stButton"] button {{
         width: 100% !important;
         justify-content: flex-start !important;
         text-align: left !important;
         font-weight: 700 !important;
-        padding-left: 0.22rem !important;
     }}
-    {projectname} [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
-    {projectname} [data-testid="stButton"] button p {{
+    {projectrow} [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
+    {projectrow} [data-testid="stButton"] button p {{
         width: 100% !important;
         text-align: left !important;
+    }}
+
+    /* La flèche projet reste centrée. */
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button {{
+        justify-content: center !important;
+        text-align: center !important;
+    }}
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button p {{
+        width: auto !important;
+        text-align: center !important;
     }}
 
     /* Noms de sous-projets et tâches : alignés à gauche. */
