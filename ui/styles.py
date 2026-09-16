@@ -31,6 +31,7 @@ def inject_brand_styles(data: dict):
     urgentfilter = css_scope("urgentfilter")
     urgentfilteractive = css_scope("urgentfilteractive")
     urgentproject = css_scope("urgentproject")
+    projectname = css_scope("projectname")
 
     css = f"""
     :root {{
@@ -499,14 +500,16 @@ def inject_brand_styles(data: dict):
         font-weight: 700 !important;
     }}
 
-    /* Nom du projet : tous les boutons de la ligne sont alignés à gauche,
-       puis la flèche (2e colonne) est recentrée juste après.
-       Cela évite de dépendre du DOM interne du bouton de nom. */
+    /* Nom du projet : tous les boutons de la ligne projet sont alignés à gauche.
+       La flèche d'ouverture est ensuite recentrée explicitement. Cette règle
+       s'appuie sur projectrow, dont le ciblage est déjà utilisé par le reste du tableau. */
+    {projectrow} [data-testid="stButton"] {{
+        width: 100% !important;
+    }}
     {projectrow} [data-testid="stButton"] button {{
         width: 100% !important;
         justify-content: flex-start !important;
         text-align: left !important;
-        font-weight: 700 !important;
     }}
     {projectrow} [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
     {projectrow} [data-testid="stButton"] button p {{
@@ -514,7 +517,7 @@ def inject_brand_styles(data: dict):
         text-align: left !important;
     }}
 
-    /* La flèche projet reste centrée. */
+    /* Exception : la flèche d'ouverture du projet reste centrée. */
     {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button {{
         justify-content: center !important;
         text-align: center !important;
