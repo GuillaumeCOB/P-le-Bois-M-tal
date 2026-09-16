@@ -23,11 +23,11 @@ PROJECT_ROW_WIDTHS = [0.30, 0.20, 0.90, 4.00, 2.00, 0.85, 0.80, 0.95, 0.90]
 PROJECT_ROW_LABELS = ["Fact.", "", "N°", "Projet", "Client", "Structure", "Statut", "Budget", "Heures"]
 
 # Sous-projet : Phase et Type étant le même concept, on ne garde que Type.
-SUBPROJECT_ROW_WIDTHS = [0.46, 0.38, 0.95, 1.70, 1.65, 1.05, 0.95, 0.90]
+SUBPROJECT_ROW_WIDTHS = [0.30, 0.20, 0.55, 2.20, 1.65, 1.05, 0.95, 0.90]
 SUBPROJECT_ROW_LABELS = ["Fact.", "", "Type", "Complément", "Collaborateur", "Échéance", "Budget", "Heures"]
 
 # Tâche : pas de statut, celui-ci est porté par le projet parent.
-TASK_ROW_WIDTHS = [0.46, 0.38, 2.85, 1.65, 1.05, 0.95, 0.90]
+TASK_ROW_WIDTHS = [0.30, 0.20, 2.85, 1.65, 1.05, 0.95, 0.90]
 TASK_ROW_LABELS = ["Fact.", "", "Tâche", "Collaborateur", "Échéance", "Budget", "Heures"]
 
 DATA_CACHE_TTL_SECONDS = 5
