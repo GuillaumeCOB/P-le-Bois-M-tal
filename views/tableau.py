@@ -192,7 +192,7 @@ def get_filtered_projects(
     ]
 
 
-@st.dialog("Modifier le projet")
+@st.dialog("Modifier le projet", width="large")
 def edit_project_dialog(project: dict, data: dict):
     with st.form(f"dialog_edit_project_{project['id']}"):
         c1, c2 = st.columns([1.0, 2.0])
@@ -253,7 +253,7 @@ def edit_project_dialog(project: dict, data: dict):
         st.rerun()
 
 
-@st.dialog("Modifier le sous-projet")
+@st.dialog("Modifier le sous-projet", width="large")
 def edit_subproject_dialog(project: dict, subproject: dict, data: dict):
     with st.form(f"dialog_edit_subproject_{subproject['id']}"):
         current_type = subproject.get("type") or subproject.get("phase") or "(aucun)"
@@ -331,7 +331,7 @@ def edit_subproject_dialog(project: dict, subproject: dict, data: dict):
         st.rerun()
 
 
-@st.dialog("Modifier la tâche")
+@st.dialog("Modifier la tâche", width="large")
 def edit_task_dialog(project: dict, subproject: dict, task: dict, data: dict):
     with st.form(f"dialog_edit_task_{task['id']}"):
         name = st.text_input("Nom de la tâche", value=str(task.get("name") or ""))
