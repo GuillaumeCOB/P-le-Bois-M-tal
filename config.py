@@ -12,10 +12,11 @@ BORDER = "#D8D9E5"
 
 LOGO_PATH = Path(__file__).parent / "assets" / "logo_builders_verticalsea.png"
 
-DISCIPLINES = ["Bois / Métal", "Béton"]
+DISCIPLINES = ["Bois / Métal", "Béton", "Structure mixte"]
 DISCIPLINE_COLORS = {
     "Bois / Métal": "#005C4D",
     "Béton": "#3B38F5",
+    "Structure mixte": "#FF5C24",
 }
 
 # Ligne principale : la structure et le statut sont portés uniquement par le projet.
