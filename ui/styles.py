@@ -31,7 +31,6 @@ def inject_brand_styles(data: dict):
     urgentfilter = css_scope("urgentfilter")
     urgentfilteractive = css_scope("urgentfilteractive")
     urgentproject = css_scope("urgentproject")
-    projectname = css_scope("projectname")
 
     css = f"""
     :root {{
@@ -500,32 +499,35 @@ def inject_brand_styles(data: dict):
         font-weight: 700 !important;
     }}
 
-    /* Nom du projet : tous les boutons de la ligne projet sont alignés à gauche.
-       La flèche d'ouverture est ensuite recentrée explicitement. Cette règle
-       s'appuie sur projectrow, dont le ciblage est déjà utilisé par le reste du tableau. */
-    {projectrow} [data-testid="stButton"] {{
+    /* Nom du projet : ciblage direct via la clé Streamlit project_name_<id>.
+       Plus robuste que nth-child et indépendant de la largeur des colonnes. */
+    [class*="st-key-project_name_"] [data-testid="stButton"] {{
         width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }}
-    {projectrow} [data-testid="stButton"] button {{
+    [class*="st-key-project_name_"] [data-testid="stButton"] button {{
         width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        text-align: left !important;
+        font-weight: 700 !important;
+        padding-left: 0.22rem !important;
+        padding-right: 0.22rem !important;
+    }}
+    [class*="st-key-project_name_"] [data-testid="stButton"] button > div,
+    [class*="st-key-project_name_"] [data-testid="stButton"] button [data-testid="stMarkdownContainer"] {{
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
         justify-content: flex-start !important;
         text-align: left !important;
     }}
-    {projectrow} [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
-    {projectrow} [data-testid="stButton"] button p {{
+    [class*="st-key-project_name_"] [data-testid="stButton"] button p {{
         width: 100% !important;
+        margin: 0 !important;
         text-align: left !important;
-    }}
-
-    /* Exception : la flèche d'ouverture du projet reste centrée. */
-    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button {{
-        justify-content: center !important;
-        text-align: center !important;
-    }}
-    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
-    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(2) [data-testid="stButton"] button p {{
-        width: auto !important;
-        text-align: center !important;
     }}
 
     /* Noms de sous-projets et tâches : alignés à gauche. */
