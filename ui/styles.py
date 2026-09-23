@@ -345,18 +345,6 @@ def inject_brand_styles(data: dict):
         justify-content: center;
         text-align: center;
     }}
-        /* FACT. centré verticalement et horizontalement */
-    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(1) .pbm-project-header-label {{
-        height: 28px !important;
-        min-height: 28px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        margin: 0 !important;
-    }}
 
     {projectheader} [data-testid="stButton"] {{
         margin: 0 !important;
