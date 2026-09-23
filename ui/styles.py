@@ -328,6 +328,7 @@ def inject_brand_styles(data: dict):
     {projectheader} .pbm-project-header-label {{
         display: flex;
         align-items: center;
+        height: 28px;
         min-height: 28px;
         width: 100%;
         box-sizing: border-box;
@@ -368,6 +369,18 @@ def inject_brand_styles(data: dict):
         background: rgba(59,56,245,0.075) !important;
         color: var(--pbm-primary-dark) !important;
     }}
+
+    /* Centrage vertical strict du contenu des boutons du header. */
+    {projectheader} [data-testid="stButton"] button > div,
+    {projectheader} [data-testid="stButton"] [data-testid="stMarkdownContainer"] {{
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+
     {projectheader} [data-testid="stButton"] button p {{
         width: 100% !important;
         margin: 0 !important;
@@ -398,7 +411,7 @@ def inject_brand_styles(data: dict):
         text-align: center !important;
     }}
 
-        /* Budget et Heures alignés exactement comme les valeurs */
+    /* Budget et Heures alignés exactement comme les valeurs. */
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stButton"] button,
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stButton"] button {{
         justify-content: flex-end !important;
@@ -406,7 +419,6 @@ def inject_brand_styles(data: dict):
         padding-left: 0.28rem !important;
         padding-right: 0.28rem !important;
     }}
-    
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stButton"] button > div,
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stButton"] button > div,
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stMarkdownContainer"],
@@ -416,7 +428,6 @@ def inject_brand_styles(data: dict):
         justify-content: flex-end !important;
         text-align: right !important;
     }}
-    
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stButton"] button p,
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stButton"] button p {{
         width: 100% !important;
