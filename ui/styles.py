@@ -409,7 +409,7 @@ def inject_brand_styles(data: dict):
     /* Espace supplémentaire avant Statut et Échéance */
     {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(7),
     {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(8) {{
-        padding-left: 0.45rem !important;
+        padding-left: 0.55rem !important;
     }}
     
     {projectrow} [data-testid="stHorizontalBlock"] > div,
