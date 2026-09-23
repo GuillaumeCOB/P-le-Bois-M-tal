@@ -398,14 +398,28 @@ def inject_brand_styles(data: dict):
         text-align: center !important;
     }}
 
-    /* Budget et Heures alignés à droite. */
+        /* Budget et Heures alignés exactement comme les valeurs */
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stButton"] button,
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stButton"] button {{
         justify-content: flex-end !important;
         text-align: right !important;
+        padding-left: 0.28rem !important;
+        padding-right: 0.28rem !important;
     }}
+    
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stButton"] button > div,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stButton"] button > div,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stMarkdownContainer"],
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stMarkdownContainer"] {{
+        width: 100% !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        text-align: right !important;
+    }}
+    
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stButton"] button p,
     {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stButton"] button p {{
+        width: 100% !important;
         text-align: right !important;
     }}
 
