@@ -857,7 +857,7 @@ def render_tableau(data: dict):
                             PROJECT_ROW_LABELS,
                             PROJECT_ROW_WIDTHS,
                             center_indices=(0, 1, 2),
-                            right_indices=(7, 8),
+                            right_indices=(8, 9),
                         )
                         for project in status_projects:
                             render_project_row(project, data)
