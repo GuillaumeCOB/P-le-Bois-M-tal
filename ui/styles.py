@@ -280,8 +280,9 @@ def inject_brand_styles(data: dict):
     }}
     .pbm-grid-header {{
         min-height: 40px;
-        padding: 0.30rem 0.34rem;
+        padding: 0.30rem 0.30rem;
         margin: 0.16rem 0 0;
+        gap: 6px !important;
         background: rgba(59,56,245,0.055);
         border: 1px solid rgba(59,56,245,0.12);
         border-radius: 9px;
