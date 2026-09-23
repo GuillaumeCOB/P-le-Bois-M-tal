@@ -405,6 +405,13 @@ def inject_brand_styles(data: dict):
         margin: 0 !important;
         padding: 0 !important;
     }}
+
+    /* Espace supplémentaire avant Statut et Échéance */
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(7),
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(8) {{
+        padding-left: 0.25rem !important;
+    }}
+    
     {projectrow} [data-testid="stHorizontalBlock"] > div,
     {subprojectrow} [data-testid="stHorizontalBlock"] > div,
     {taskrow} [data-testid="stHorizontalBlock"] > div {{
