@@ -109,6 +109,19 @@ def project_start_date(project: dict):
     ]
     return min(starts) if starts else None
 
+def project_next_due_date(project: dict):
+    """Retourne l'échéance active la plus proche du projet."""
+    due_dates = [
+        due
+        for item in _project_planning_items(project)
+        if (due := _parse_date(item.get("due_date"))) is not None
+    ]
+
+    if not due_dates:
+        return None
+
+    return min(due_dates)
+
 
 def project_is_urgent(project: dict, today: date | None = None) -> bool:
     """Vrai dès que la date de démarrage calculée du projet est atteinte."""
@@ -752,9 +765,17 @@ def render_project_row(project: dict, data: dict):
                     data["status_colors"].get(status, PRIMARY),
                     PRIMARY_DARK,
                 )
+
+            next_due = project_next_due_date(project)
+
             with cols[7]:
-                cell(display_amount(total_budget), "number")
+                cell(
+                    next_due.strftime("%d/%m/%Y") if next_due else "—"
+                )
+
             with cols[8]:
+                cell(display_amount(total_budget), "number")
+            with cols[9]:
                 cell(display_hours(total_hours), "number")
 
         if st.session_state[expand_key]:
