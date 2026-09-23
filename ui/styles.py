@@ -295,6 +295,14 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-muted);
     }}
 
+        /* Centrage des en-têtes Structure / Statut / Échéance */
+    .pbm-grid-header .pbm-grid-cell:nth-child(6),
+    .pbm-grid-header .pbm-grid-cell:nth-child(7),
+    .pbm-grid-header .pbm-grid-cell:nth-child(8) {{
+        justify-content: center !important;
+        text-align: center !important;
+    }}
+
     /* En-têtes des niveaux 2 et 3 : repères très légers, sans effet de carte. */
     {subprojects} .pbm-grid-header-wrap,
     {tasks} .pbm-grid-header-wrap {{
@@ -411,7 +419,21 @@ def inject_brand_styles(data: dict):
     {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(8) {{
         padding-left: 0.55rem !important;
     }}
+
+        /* Centrage Structure / Statut / Échéance */
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(6),
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(7),
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(8) {{
+        text-align: center !important;
+    }}
     
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(6) .pbm-cell,
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(7) .pbm-cell,
+    {projectrow} [data-testid="stHorizontalBlock"] > :nth-child(8) .pbm-cell {{
+        justify-content: center !important;
+        text-align: center !important;
+    }}
+        
     {projectrow} [data-testid="stHorizontalBlock"] > div,
     {subprojectrow} [data-testid="stHorizontalBlock"] > div,
     {taskrow} [data-testid="stHorizontalBlock"] > div {{
