@@ -18,6 +18,7 @@ def inject_brand_styles(data: dict):
     board = css_scope("board")
     project = css_scope("project")
     projectrow = css_scope("projectrow")
+    projectheader = css_scope("projectheader")
     subprojects = css_scope("subprojects")
     subprojectrow = css_scope("subprojectrow")
     tasks = css_scope("tasks")
@@ -296,18 +297,116 @@ def inject_brand_styles(data: dict):
         color: var(--pbm-muted);
     }}
 
-        /* Centrage des en-têtes Structure / Statut / Échéance */
-    .pbm-grid-header .pbm-grid-cell:nth-child(6),
-    .pbm-grid-header .pbm-grid-cell:nth-child(7),
-    .pbm-grid-header .pbm-grid-cell:nth-child(8) {{
+    /* En-tête principal cliquable : même géométrie que les lignes projet. */
+    {projectheader} {{
+        min-height: 40px;
+        padding: 0.30rem 0.30rem;
+        margin: 0.16rem 0 20px;
+        background: rgba(59,56,245,0.055);
+        border: 1px solid rgba(59,56,245,0.12);
+        border-radius: 9px;
+        box-sizing: border-box;
+        gap: 0 !important;
+    }}
+    {projectheader} [data-testid="stHorizontalBlock"] {{
+        gap: 6px !important;
+        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    {projectheader} [data-testid="stHorizontalBlock"] > div {{
+        min-width: 0 !important;
+        align-self: center !important;
+    }}
+
+    /* Même espace que les lignes projet avant Statut et Échéance. */
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(7),
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(8) {{
+        padding-left: 0.55rem !important;
+    }}
+
+    {projectheader} .pbm-project-header-label {{
+        display: flex;
+        align-items: center;
+        min-height: 28px;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0 0.32rem;
+        color: var(--pbm-muted);
+        font-size: 0.70rem;
+        line-height: 1;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }}
+    {projectheader} .pbm-project-header-label.center {{
+        justify-content: center;
+        text-align: center;
+    }}
+
+    {projectheader} [data-testid="stButton"] {{
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }}
+    {projectheader} [data-testid="stButton"] button {{
+        width: 100% !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        padding: 0 0.32rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        border: 0 !important;
+        border-radius: 6px !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: var(--pbm-muted) !important;
+    }}
+    {projectheader} [data-testid="stButton"] button:hover {{
+        background: rgba(59,56,245,0.075) !important;
+        color: var(--pbm-primary-dark) !important;
+    }}
+    {projectheader} [data-testid="stButton"] button p {{
+        width: 100% !important;
+        margin: 0 !important;
+        color: inherit !important;
+        font-size: 0.70rem !important;
+        line-height: 1 !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        text-align: left !important;
+    }}
+
+    /* N°, Structure, Statut et Échéance centrés. */
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(3) [data-testid="stButton"] button,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(6) [data-testid="stButton"] button,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(7) [data-testid="stButton"] button,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(8) [data-testid="stButton"] button {{
         justify-content: center !important;
         text-align: center !important;
     }}
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(3) [data-testid="stButton"] button p,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(6) [data-testid="stButton"] button p,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(7) [data-testid="stButton"] button p,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(8) [data-testid="stButton"] button p {{
+        text-align: center !important;
+    }}
 
-        /* Même décalage que les lignes projet pour Statut et Échéance */
-    .pbm-grid-header .pbm-grid-cell:nth-child(7),
-    .pbm-grid-header .pbm-grid-cell:nth-child(8) {{
-        padding-left: calc(0.32rem + 0.55rem) !important;
+    /* Budget et Heures alignés à droite. */
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stButton"] button,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stButton"] button {{
+        justify-content: flex-end !important;
+        text-align: right !important;
+    }}
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(9) [data-testid="stButton"] button p,
+    {projectheader} [data-testid="stHorizontalBlock"] > :nth-child(10) [data-testid="stButton"] button p {{
+        text-align: right !important;
     }}
 
     /* En-têtes des niveaux 2 et 3 : repères très légers, sans effet de carte. */
