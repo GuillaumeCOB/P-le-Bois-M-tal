@@ -170,23 +170,38 @@ def project_search_blob(project: dict) -> str:
 
 def render_project_group_total(projects: list[dict], widths):
     total_budget, total_hours = projects_totals(projects)
+
     values = [
-        "",
-        "",
-        "",
-        "TOTAL",
-        f"{len(projects)} projet{'s' if len(projects) != 1 else ''}",
-        "",
-        "",
-        display_amount(total_budget),
-        display_hours(total_hours),
+        "",  # Fact.
+        "",  # Flèche
+        "",  # N°
+        "TOTAL",  # Projet
+        f"{len(projects)} projet{'s' if len(projects) != 1 else ''}",  # Client
+        "",  # Structure
+        "",  # Statut
+        "",  # Échéance
+        display_amount(total_budget),  # Budget
+        display_hours(total_hours),  # Heures
     ]
+
     cells = []
+
     for idx, value in enumerate(values):
-        extra = " right" if idx in (7, 8) else " center" if idx in (0, 1, 2) else ""
-        cells.append(f'<div class="pbm-grid-cell{extra}">{escape(value)}</div>')
+        extra = (
+            " right"
+            if idx in (8, 9)
+            else " center"
+            if idx in (0, 1, 2)
+            else ""
+        )
+
+        cells.append(
+            f'<div class="pbm-grid-cell{extra}">{escape(value)}</div>'
+        )
+
     st.markdown(
-        f'<div class="pbm-grid-row pbm-grid-total" style="grid-template-columns:{grid_template(widths)}">'
+        f'<div class="pbm-grid-row pbm-grid-total" '
+        f'style="grid-template-columns:{grid_template(widths)}">'
         + "".join(cells)
         + "</div>",
         unsafe_allow_html=True,
