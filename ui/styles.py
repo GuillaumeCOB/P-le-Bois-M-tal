@@ -307,7 +307,7 @@ def inject_brand_styles(data: dict):
         /* Même décalage que les lignes projet pour Statut et Échéance */
     .pbm-grid-header .pbm-grid-cell:nth-child(7),
     .pbm-grid-header .pbm-grid-cell:nth-child(8) {{
-        padding-left: calc(0.32rem + 0.55rem) !important;
+        padding-left: calc(0.45rem + 0.55rem) !important;
     }}
 
     /* En-têtes des niveaux 2 et 3 : repères très légers, sans effet de carte. */
