@@ -20,8 +20,8 @@ DISCIPLINE_COLORS = {
 }
 
 # Ligne principale : la structure et le statut sont portés uniquement par le projet.
-PROJECT_ROW_WIDTHS = [0.30, 0.20, 1.10, 3.60, 2.00, 0.85, 0.80, 0.80, 0.95, 0.90]
-PROJECT_ROW_LABELS = ["Fact.", "", "N°", "Projet", "Client", "Structure", "Statut", "Echéance", Statut", "Budget", "Heures"]
+PROJECT_ROW_WIDTHS = [0.30, 0.20, 1.10, 3.60, 2.00, 0.85, 0.80, 0.95, 0.90]
+PROJECT_ROW_LABELS = ["Fact.", "", "N°", "Projet", "Client", "Structure", "Statut", "Budget", "Heures"]
 
 # Sous-projet : Phase et Type étant le même concept, on ne garde que Type.
 SUBPROJECT_ROW_WIDTHS = [0.30, 0.20, 0.55, 2.20, 1.65, 1.05, 0.95, 0.90]
