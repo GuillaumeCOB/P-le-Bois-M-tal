@@ -48,6 +48,37 @@ def _set_summary_status(value):
     st.session_state["pbm_summary_status"] = value
 
 
+PROJECT_SORT_FIELD_KEY = "pbm_project_sort_field"
+PROJECT_SORT_DESC_KEY = "pbm_project_sort_desc"
+PROJECT_SORT_FIELDS = {
+    2: "project_number",
+    3: "name",
+    4: "client",
+    5: "discipline",
+    6: "status",
+    7: "due_date",
+    8: "budget",
+    9: "hours",
+}
+
+
+def _ensure_project_sort_state():
+    if PROJECT_SORT_FIELD_KEY not in st.session_state:
+        # Le tableau était déjà trié par numéro de projet par défaut.
+        st.session_state[PROJECT_SORT_FIELD_KEY] = "project_number"
+    if PROJECT_SORT_DESC_KEY not in st.session_state:
+        st.session_state[PROJECT_SORT_DESC_KEY] = False
+
+
+def _set_project_sort(field: str):
+    _ensure_project_sort_state()
+    if st.session_state[PROJECT_SORT_FIELD_KEY] == field:
+        st.session_state[PROJECT_SORT_DESC_KEY] = not st.session_state[PROJECT_SORT_DESC_KEY]
+    else:
+        st.session_state[PROJECT_SORT_FIELD_KEY] = field
+        st.session_state[PROJECT_SORT_DESC_KEY] = False
+
+
 HOURS_PER_DAY = 8
 PARIS_TZ = ZoneInfo("Europe/Paris")
 
@@ -171,6 +202,99 @@ def _sort_projects(projects: list[dict]) -> list[dict]:
             str(p.get("name") or "").casefold(),
         ),
     )
+
+
+def _project_sort_value(project: dict, field: str, data: dict):
+    if field == "project_number":
+        value = str(project.get("project_number") or "").strip()
+        return value.casefold() if value else None
+    if field == "name":
+        value = str(project.get("name") or "").strip()
+        return value.casefold() if value else None
+    if field == "client":
+        value = str(project.get("client") or "").strip()
+        return value.casefold() if value else None
+    if field == "discipline":
+        value = str(project.get("discipline") or "").strip()
+        return value.casefold() if value else None
+    if field == "status":
+        status = project.get("status")
+        try:
+            return data["statuses"].index(status)
+        except ValueError:
+            return len(data["statuses"])
+    if field == "due_date":
+        return project_next_due_date(project)
+    if field == "budget":
+        return project_totals(project)[0]
+    if field == "hours":
+        return project_totals(project)[1]
+    return None
+
+
+def _sort_projects_for_display(projects: list[dict], data: dict) -> list[dict]:
+    _ensure_project_sort_state()
+    field = st.session_state[PROJECT_SORT_FIELD_KEY]
+    descending = bool(st.session_state[PROJECT_SORT_DESC_KEY])
+
+    # Le statut pilote déjà les groupes : dans un groupe, on garde le tri N° / nom.
+    if field == "status":
+        return _sort_projects(projects)
+
+    ordered = _sort_projects(projects)
+    with_value = []
+    without_value = []
+    for project in ordered:
+        value = _project_sort_value(project, field, data)
+        if value is None:
+            without_value.append(project)
+        else:
+            with_value.append(project)
+
+    with_value = sorted(
+        with_value,
+        key=lambda project: _project_sort_value(project, field, data),
+        reverse=descending,
+    )
+    # Les valeurs vides restent toujours en bas, quel que soit le sens du tri.
+    return with_value + without_value
+
+
+def _project_sort_label(field: str, label: str) -> str:
+    _ensure_project_sort_state()
+    if st.session_state[PROJECT_SORT_FIELD_KEY] != field:
+        return label
+    return f"{label} {'↓' if st.session_state[PROJECT_SORT_DESC_KEY] else '↑'}"
+
+
+def render_project_sort_header(status_index: int):
+    """En-tête principal cliquable, aligné sur les colonnes des projets."""
+    _ensure_project_sort_state()
+    with ui_container(f"pbm_projectheader_{status_index}", "projectheader"):
+        cols = st.columns(PROJECT_ROW_WIDTHS, gap="small", vertical_alignment="center")
+
+        with cols[0]:
+            st.markdown(
+                f'<div class="pbm-project-header-label center">{PROJECT_ROW_LABELS[0]}</div>',
+                unsafe_allow_html=True,
+            )
+        with cols[1]:
+            st.markdown(
+                '<div class="pbm-project-header-label center">&nbsp;</div>',
+                unsafe_allow_html=True,
+            )
+
+        for column_index in range(2, len(PROJECT_ROW_LABELS)):
+            field = PROJECT_SORT_FIELDS.get(column_index)
+            if field is None:
+                continue
+            cols[column_index].button(
+                _project_sort_label(field, PROJECT_ROW_LABELS[column_index]),
+                key=f"project_sort_{field}_{status_index}",
+                use_container_width=True,
+                on_click=_set_project_sort,
+                args=(field,),
+            )
 
 
 def _active_projects(data: dict) -> list[dict]:
@@ -831,13 +955,23 @@ def render_tableau(data: dict):
             elif not projects:
                 st.info("Aucun projet ne correspond aux filtres.")
 
-            # Affichage principal trié par statut, dans l'ordre défini dans Paramètres.
-            for status_index, status in enumerate(data["statuses"]):
+            # Affichage principal groupé par statut. Les clics sur l'en-tête trient
+            # les projets dans chaque groupe ; le tri Statut inverse l'ordre des groupes.
+            _ensure_project_sort_state()
+            status_entries = list(enumerate(data["statuses"]))
+            if (
+                st.session_state[PROJECT_SORT_FIELD_KEY] == "status"
+                and st.session_state[PROJECT_SORT_DESC_KEY]
+            ):
+                status_entries.reverse()
+
+            for status_index, status in status_entries:
                 if status_filter is not None and status != status_filter:
                     continue
 
-                status_projects = _sort_projects(
-                    [p for p in projects if p.get("status") == status]
+                status_projects = _sort_projects_for_display(
+                    [p for p in projects if p.get("status") == status],
+                    data,
                 )
                 if not status_projects:
                     continue
@@ -853,12 +987,7 @@ def render_tableau(data: dict):
                         f"pbm_status_group_{status_index}",
                         f"status-group-{status_index}",
                     ):
-                        render_grid_header(
-                            PROJECT_ROW_LABELS,
-                            PROJECT_ROW_WIDTHS,
-                            center_indices=(0, 1, 2),
-                            right_indices=(8, 9),
-                        )
+                        render_project_sort_header(status_index)
                         for project in status_projects:
                             render_project_row(project, data)
                         render_project_group_total(
